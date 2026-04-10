@@ -1,0 +1,49 @@
+/* أساسي */
+body {
+    -webkit-tap-highlight-color: transparent;
+    color: #3a3a44 !important;
+}
+body::after {
+    /* position: fixed; */
+    user-select: none;
+    z-index: 1;
+    content: 'جميع الحقوق محفوظة لدى طبيبك';
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    padding: 10px 0;
+    font-size: 14px;
+    opacity: .6;
+}
+.body::after {
+    position: fixed;
+}
+img {
+    user-select: none;
+    -webkit-user-drag: none;
+    display: block;
+}
+button,a,input,select {
+    outline-color: rgb(21, 137, 245);
+}
+button {
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.flex {
+    display: flex;
+    align-items: center;
+}
+
+@media (hover: none) and (pointer: coarse) {
+    body {
+        user-select: none;
+    }
+    .badge {
+        user-select: text !important;
+    }
+}
