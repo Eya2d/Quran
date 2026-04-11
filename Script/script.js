@@ -19,12 +19,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===== بناء قائمة الفلتر ديناميكيًا =====
-  filterDiv.innerHTML = `<a data-cat="الكل" class="coco">الكل</a>`;
+  filterDiv.innerHTML = `<div data-cat="الكل" class="coco">الكل</div>`;
   CATEGORIES.forEach(cat => {
-    const a = document.createElement('a');
-    a.dataset.cat = cat;
-    a.textContent = cat;
-    filterDiv.appendChild(a);
+    const div = document.createElement('div');
+    div.dataset.cat = cat;
+    div.textContent = cat;
+    filterDiv.appendChild(div);
   });
 
   // ===== نسخ البيانات محليًا =====
@@ -120,16 +120,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== FILTER ANCHORS (ديناميكي) =====
   filterDiv.addEventListener('click', (e) => {
-    const a = e.target.closest('a[data-cat]');
-    if (!a) return;
-    e.preventDefault();
-
-    filterDiv.querySelectorAll('a[data-cat]').forEach(b => b.classList.remove('coco'));
-    a.classList.add('coco');
-
-    activeFilter = a.dataset.cat;
+    const div = e.target.closest('div[data-cat]');
+    if (!div) return;
+  
+    filterDiv.querySelectorAll('div[data-cat]').forEach(b => b.classList.remove('coco'));
+    div.classList.add('coco');
+  
+    activeFilter = div.dataset.cat;
     
-    // Update placeholder when filter changes
     updatePlaceholder();
     
     doSearch(searchInput.value);
