@@ -472,17 +472,22 @@ const params  = new URLSearchParams(location.search);
       titleEl.textContent = title;
       const current = catVideos.find(v => v.id === videoId) || { id: videoId, category: cat };
       addToWatchHistory({ ...current, title });
-
-      // تحديث عنوان الفيديو الحالي في القائمة بعد جلبه
-      const currentTitleEl = document.getElementById('st-' + videoId);
-      if (currentTitleEl) currentTitleEl.textContent = title;
     });
 
-    // ===== الفيديوهات المقترحة =====
-    // الترتيب: الفيديو الحالي أولاً، ثم ما بعده في الداتا، ثم ما قبله
-    const afterCurrent  = catVideos.slice(currentIdx);        // من الحالي للنهاية
-    const beforeCurrent = catVideos.slice(0, currentIdx);     // من البداية للحالي
-    const orderedPool   = [...afterCurrent, ...beforeCurrent]; // الحالي أول + ما بعده + ما قبله
+    // ===== بناء قائمة المقترحات =====
+    // الفيديو الحالي في مكانه الأصلي أولاً، ثم ما بعده بالترتيب
+    // العدد الكلي = 10 (بما فيهم الفيديو الحالي)
+    const TOTAL = 10;
+    const currentVideo = catVideos[currentIdx];
+    const afterCurrent = catVideos.slice(currentIdx + 1);          // ما بعد الحالي
+    const beforeCurrent = catVideos.slice(0, currentIdx);           // ما قبل الحالي
+
+    // نملأ: الحالي + ما بعده + ما قبله (لو احتجنا تكملة)
+    const pool = [
+      ...(currentVideo ? [currentVideo] : []),
+      ...afterCurrent,
+      ...beforeCurrent,
+    ].slice(0, TOTAL);
 
     function renderSugg(list) {
       if (!list.length) {
@@ -495,7 +500,7 @@ const params  = new URLSearchParams(location.search);
           <a class="sugg-card${isCurrent ? ' coco2' : ''}"
              href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
              style="animation-delay:${i * 50}ms"
-             onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+             onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g, '&quot;')})">
             <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
             <div class="sugg-info">
               <div class="sugg-title" id="st-${v.id}">${v.title}</div>
@@ -505,9 +510,9 @@ const params  = new URLSearchParams(location.search);
       }).join('');
     }
 
-    renderSugg(orderedPool);
+    renderSugg(pool);
 
-    enrichVideos(orderedPool).then(enriched => {
+    enrichVideos(pool.filter(v => v.id !== videoId)).then(enriched => {
       enriched.forEach(v => {
         const el = document.getElementById('st-' + v.id);
         if (el) el.textContent = v.title;
