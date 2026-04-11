@@ -9,6 +9,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let activeFilter = 'الكل';
 
+  // Function to update placeholder based on active filter
+  function updatePlaceholder() {
+    if (activeFilter === 'الكل') {
+      searchInput.placeholder = 'إبحث بالنص او بالقسم...';
+    } else {
+      searchInput.placeholder = `إبحث في قسم ${activeFilter}...`;
+    }
+  }
+
   // ===== بناء قائمة الفلتر ديناميكيًا =====
   filterDiv.innerHTML = `<a data-cat="الكل" class="coco">الكل</a>`;
   CATEGORIES.forEach(cat => {
@@ -119,11 +128,18 @@ document.addEventListener("DOMContentLoaded", () => {
     a.classList.add('coco');
 
     activeFilter = a.dataset.cat;
+    
+    // Update placeholder when filter changes
+    updatePlaceholder();
+    
     doSearch(searchInput.value);
   });
 
   // ===== INIT =====
   renderHistory();
+  
+  // Set initial placeholder
+  updatePlaceholder();
 
   enrichVideos(DATA.الكل).then(enriched => {
     localData.الكل = enriched;
