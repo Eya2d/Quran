@@ -172,7 +172,7 @@ header {
 }
 
 /* العناصر */
-.menu a {
+.menu div {
     position: relative;
     user-select: none;
     transition: ease 0.5s;
@@ -189,11 +189,11 @@ header {
     font-family: system-ui;
 }
 
-.menu a:hover {
+.menu div:hover {
     transition: ease 0.2s;
     background: #3c4b5911;
 }
-.menu a:active {
+.menu div:active {
     opacity: .6;
     transition: ease 0s;
 }
