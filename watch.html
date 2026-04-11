@@ -396,23 +396,18 @@ const params  = new URLSearchParams(location.search);
     } catch (_) {}
   }
 
-  // إعادة تفعيل Wake Lock إذا رجع المستخدم للتطبيق
   document.addEventListener('visibilitychange', async () => {
     if (document.visibilityState === 'visible' && isPlaying) {
       await requestWakeLock();
     }
   });
 
-  // ===== حالة الانتقال التلقائي (محفوظة في localStorage) =====
+  // ===== حالة الانتقال التلقائي =====
   let autoNext = localStorage.getItem('autoNext') === 'true';
-  let isPlaying = false; // حالة تشغيل الفيديو
+  let isPlaying = false;
 
   function applyAutoNextStyle() {
-    if (autoNext) {
-      autoNextBtn.classList.add('active');
-    } else {
-      autoNextBtn.classList.remove('active');
-    }
+    autoNextBtn.classList.toggle('active', autoNext);
   }
 
   autoNextBtn.addEventListener('click', () => {
@@ -427,7 +422,6 @@ const params  = new URLSearchParams(location.search);
   catEl.textContent   = cat;
   idBadge.textContent = videoId || '—';
 
-  // قائمة الفيديوهات في القسم وترتيب الفيديو الحالي
   const catVideos  = DATA[cat] || [];
   const currentIdx = catVideos.findIndex(v => v.id === videoId);
   const nextVideo  = catVideos[currentIdx + 1] || null;
@@ -437,26 +431,20 @@ const params  = new URLSearchParams(location.search);
   } else {
     player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`;
 
-    // ===== رصد حالة الفيديو عبر postMessage =====
+    // ===== رصد حالة الفيديو =====
     window.addEventListener('message', async (e) => {
       try {
         const data = JSON.parse(e.data);
         if (data.event === 'infoDelivery' && data.info && data.info.playerState !== undefined) {
           const state = data.info.playerState;
-
-          // 1 = playing → فعّل Wake Lock
           if (state === 1) {
             isPlaying = true;
             await requestWakeLock();
           }
-
-          // 2 = paused | 0 = ended → حرر Wake Lock
           if (state === 2 || state === -1) {
             isPlaying = false;
             await releaseWakeLock();
           }
-
-          // 0 = ended → انتقال تلقائي
           if (state === 0) {
             isPlaying = false;
             await releaseWakeLock();
@@ -468,7 +456,6 @@ const params  = new URLSearchParams(location.search);
       } catch (_) {}
     });
 
-    // مراقبة دورية لحالة اليوتيوب
     player.addEventListener('load', () => {
       setInterval(() => {
         try {
@@ -485,33 +472,42 @@ const params  = new URLSearchParams(location.search);
       titleEl.textContent = title;
       const current = catVideos.find(v => v.id === videoId) || { id: videoId, category: cat };
       addToWatchHistory({ ...current, title });
+
+      // تحديث عنوان الفيديو الحالي في القائمة بعد جلبه
+      const currentTitleEl = document.getElementById('st-' + videoId);
+      if (currentTitleEl) currentTitleEl.textContent = title;
     });
 
     // ===== الفيديوهات المقترحة =====
-    const rawPool = catVideos.filter(v => v.id !== videoId).slice(0, 10);
+    // الترتيب: الفيديو الحالي أولاً، ثم ما بعده في الداتا، ثم ما قبله
+    const afterCurrent  = catVideos.slice(currentIdx);        // من الحالي للنهاية
+    const beforeCurrent = catVideos.slice(0, currentIdx);     // من البداية للحالي
+    const orderedPool   = [...afterCurrent, ...beforeCurrent]; // الحالي أول + ما بعده + ما قبله
 
     function renderSugg(list) {
       if (!list.length) {
         suggList.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:20px 0">لا توجد مقترحات</p>';
         return;
       }
-      suggList.innerHTML = list.map((v, i) => `
-        <a class="sugg-card"
-           href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
-           style="animation-delay:${i * 50}ms"
-           onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')})">
-          <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
-          <div class="sugg-info">
-            <div class="sugg-title" id="st-${v.id}">${v.title}</div>
-            <span class="sugg-cat">${v.category}</span>
-          </div>
-        </a>
-      `).join('');
+      suggList.innerHTML = list.map((v, i) => {
+        const isCurrent = v.id === videoId;
+        return `
+          <a class="sugg-card${isCurrent ? ' coco2' : ''}"
+             href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
+             style="animation-delay:${i * 50}ms"
+             onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+            <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
+            <div class="sugg-info">
+              <div class="sugg-title" id="st-${v.id}">${v.title}</div>
+              <span class="sugg-cat">${v.category}</span>
+            </div>
+          </a>`;
+      }).join('');
     }
 
-    renderSugg(rawPool);
+    renderSugg(orderedPool);
 
-    enrichVideos(rawPool).then(enriched => {
+    enrichVideos(orderedPool).then(enriched => {
       enriched.forEach(v => {
         const el = document.getElementById('st-' + v.id);
         if (el) el.textContent = v.title;
