@@ -166,18 +166,22 @@ let dragDirection = null;
 let isTouchDevice = false;
 let hasMoved = false;
 let isDragging = false;
-let blockNextClick = false;
+let blockNextClick = false; // ✅ جديد
 
+// بداية السحب
 container.addEventListener('touchstart', startDrag);
 container.addEventListener('mousedown', startDrag);
 
+// أثناء السحب
 window.addEventListener('touchmove', moveDrag);
 window.addEventListener('mousemove', moveDrag);
 
+// نهاية السحب
 window.addEventListener('touchend', endDrag);
 window.addEventListener('mouseup', endDrag);
 window.addEventListener('mouseleave', endDrag);
 
+// ✅ منع فتح الرابط بعد السحب (نقرة واحدة فقط)
 document.addEventListener('click', function (e) {
   const link = e.target.closest('a, .cooo.x-btn');
   if (!link) return;
@@ -185,9 +189,11 @@ document.addEventListener('click', function (e) {
   if (blockNextClick) {
     e.preventDefault();
     e.stopPropagation();
-    blockNextClick = false;
+    blockNextClick = false; // يسمح بالنقرات التالية
   }
 }, true);
+
+// =========================
 
 function startDrag(e) {
   if (e.button === 2) return;
@@ -211,6 +217,8 @@ function startDrag(e) {
   container.style.cursor = 'grabbing';
   document.body.style.userSelect = 'none';
 }
+
+// =========================
 
 function moveDrag(e) {
   if (!isDown) return;
@@ -237,6 +245,8 @@ function moveDrag(e) {
   container.scrollLeft = scrollLeft - walk;
 }
 
+// =========================
+
 function endDrag(e) {
   if (!isDown) return;
 
@@ -245,6 +255,7 @@ function endDrag(e) {
   container.style.cursor = 'grab';
   document.body.style.userSelect = '';
 
+  // ✅ إذا حصل سحب فعلي → امنع أول نقرة
   if (hasMoved || isDragging) {
     blockNextClick = true;
   }
@@ -265,6 +276,8 @@ function endDrag(e) {
     }, 100);
   }
 }
+
+// =========================
 
 function snapToClosest() {
   const items = Array.from(container.querySelectorAll('.cooo.x-btn'));
@@ -337,6 +350,8 @@ function snapToClosest() {
   }
 }
 
+// =========================
+
 let lastScrollLeft = 0;
 container.addEventListener('scroll', () => {
   if (isDown && isTouchDevice) {
@@ -347,6 +362,9 @@ container.addEventListener('scroll', () => {
   }
 });
 
+// =========================
+
+// منع سحب الصور
 container.addEventListener('dragstart', (e) => {
   if (isDown || hasMoved || isDragging) {
     e.preventDefault();
@@ -356,6 +374,7 @@ container.addEventListener('dragstart', (e) => {
 
 container.style.cursor = 'grab';
 
+// منع كليك يمين أثناء السحب
 container.addEventListener('contextmenu', (e) => {
   if (isDown || isDragging) {
     e.preventDefault();
