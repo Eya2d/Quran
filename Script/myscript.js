@@ -4,28 +4,23 @@ document.addEventListener("DOMContentLoaded", () => {
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth" // حركة ناعمة، يمكنك إزالتها إن أردت فورياً
+      behavior: "smooth"
     });
   };
 
   // دالة لفتح القائمة مع التمرير للأعلى
   const openMenuWithScroll = (menu) => {
-    // إغلاق القوائم الأخرى أولاً
     document.querySelectorAll(".menu").forEach(m => {
       if (m !== menu) m.classList.remove("active");
     });
 
-    // فتح القائمة
     menu.classList.add("active");
-
-    // التمرير إلى أعلى الصفحة
     scrollToTop();
   };
 
-  // دالة ربط الأحداث بعناصر toggle
+  // ربط أزرار التوجل
   const bindToggleEvents = () => {
     document.querySelectorAll(".toggle").forEach(button => {
-      // تجنب ربط الحدث أكثر من مرة
       if (button.hasAttribute('data-listener-bound')) return;
       button.setAttribute('data-listener-bound', 'true');
 
@@ -34,11 +29,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let menu = button.nextElementSibling;
 
         if (menu && menu.classList.contains('menu')) {
-          // إذا كانت القائمة مغلقة، نفتحها مع التمرير للأعلى
           if (!menu.classList.contains('active')) {
             openMenuWithScroll(menu);
           } else {
-            // إذا كانت مفتوحة، نغلقها فقط
             menu.classList.remove("active");
           }
         }
@@ -48,12 +41,10 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // ربط الأحداث بالعناصر الحالية والمستقبلية
+  // مراقبة العناصر الجديدة
   const observeDynamicMenus = () => {
-    // ربط العناصر الحالية
     bindToggleEvents();
 
-    // مراقبة الإضافات الجديدة في DOM
     const observer = new MutationObserver(() => {
       bindToggleEvents();
     });
@@ -64,10 +55,9 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // بدء المراقبة وربط الأحداث
   observeDynamicMenus();
 
-  // إغلاق القائمة باللمس خارجها
+  // إغلاق القائمة عند الضغط خارجها (موبايل)
   if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
     document.addEventListener("touchstart", (e) => {
       if (!e.target.closest('.toggle') && !e.target.closest('.menu')) {
@@ -78,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // إغلاق القائمة بالضغط على الكمبيوتر
+  // إغلاق القائمة عند الضغط خارجها (كمبيوتر)
   document.addEventListener("mousedown", (e) => {
     if (!e.target.closest('.toggle') && !e.target.closest('.menu')) {
       document.querySelectorAll(".menu").forEach(menu => {
@@ -87,29 +77,30 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // عند النقر على رابط داخل القائمة، أغلق القائمة
-  const bindLinkEvents = () => {
-    document.querySelectorAll(".menu a").forEach(link => {
-      if (link.hasAttribute('data-link-bound')) return;
-      link.setAttribute('data-link-bound', 'true');
+  // ⭐ التعديل هنا: إغلاق القائمة عند الضغط على أي عنصر داخلها
+  const bindMenuItemEvents = () => {
+    document.querySelectorAll(".menu *").forEach(item => {
+      if (item.hasAttribute('data-item-bound')) return;
+      item.setAttribute('data-item-bound', 'true');
 
-      link.addEventListener("click", (e) => {
-        const menu = link.closest('.menu');
+      item.addEventListener("click", (e) => {
+        const menu = item.closest('.menu');
         if (menu) menu.classList.remove("active");
       });
 
-      link.addEventListener("touchstart", (e) => {
+      item.addEventListener("touchstart", (e) => {
         e.stopPropagation();
       });
     });
   };
 
-  // ربط أحداث الروابط مع المراقبة الديناميكية
-  bindLinkEvents();
-  const linkObserver = new MutationObserver(() => {
-    bindLinkEvents();
+  bindMenuItemEvents();
+
+  const itemObserver = new MutationObserver(() => {
+    bindMenuItemEvents();
   });
-  linkObserver.observe(document.body, {
+
+  itemObserver.observe(document.body, {
     childList: true,
     subtree: true
   });
