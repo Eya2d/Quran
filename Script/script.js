@@ -166,7 +166,8 @@ let dragDirection = null;
 let isTouchDevice = false;
 let hasMoved = false;
 let isDragging = false;
-let blockNextClick = false; // ✅ جديد
+let blockNextClick = false;
+let dragDistance = 0; // ✅ جديد
 
 // بداية السحب
 container.addEventListener('touchstart', startDrag);
@@ -181,7 +182,7 @@ window.addEventListener('touchend', endDrag);
 window.addEventListener('mouseup', endDrag);
 window.addEventListener('mouseleave', endDrag);
 
-// ✅ منع فتح الرابط بعد السحب (نقرة واحدة فقط)
+// منع فتح الرابط بعد السحب
 document.addEventListener('click', function (e) {
   const link = e.target.closest('a, .cooo.x-btn');
   if (!link) return;
@@ -189,7 +190,7 @@ document.addEventListener('click', function (e) {
   if (blockNextClick) {
     e.preventDefault();
     e.stopPropagation();
-    blockNextClick = false; // يسمح بالنقرات التالية
+    blockNextClick = false;
   }
 }, true);
 
@@ -201,6 +202,7 @@ function startDrag(e) {
   isDown = true;
   hasMoved = false;
   isDragging = false;
+  dragDistance = 0; // ✅ تصفير
 
   isTouchDevice = e.type === 'touchstart';
 
@@ -232,7 +234,10 @@ function moveDrag(e) {
 
   const walk = (currentX - startX) * 1.2;
 
-  if (Math.abs(walk) > 5) {
+  // ✅ حساب المسافة الفعلية للسحب
+  dragDistance = Math.abs(currentX - startX);
+
+  if (dragDistance > 5) {
     hasMoved = true;
     isDragging = true;
   }
@@ -255,19 +260,27 @@ function endDrag(e) {
   container.style.cursor = 'grab';
   document.body.style.userSelect = '';
 
-  // ✅ إذا حصل سحب فعلي → امنع أول نقرة
   if (hasMoved || isDragging) {
     blockNextClick = true;
   }
 
+  // ✅ نسبة 30%
+  const threshold = container.offsetWidth * 0.3;
+
   if (isTouchDevice || e.type === 'touchend') {
     setTimeout(() => {
-      snapToClosest();
+
+      if (dragDistance > threshold) {
+        snapToNext(); // 🔥 جديد
+      } else {
+        snapToClosest();
+      }
 
       setTimeout(() => {
         hasMoved = false;
         isDragging = false;
       }, 300);
+
     }, 10);
   } else {
     setTimeout(() => {
@@ -279,75 +292,80 @@ function endDrag(e) {
 
 // =========================
 
-function snapToClosest() {
+// 🔥 الانتقال للعنصر التالي حسب الاتجاه
+function snapToNext() {
   const items = Array.from(container.querySelectorAll('.cooo.x-btn'));
   if (items.length === 0) return;
 
-  const containerStyle = getComputedStyle(container);
-  const containerPaddingLeft = parseFloat(containerStyle.paddingLeft);
-  const containerPaddingRight = parseFloat(containerStyle.paddingRight);
+  const containerRect = container.getBoundingClientRect();
+  const containerCenter = containerRect.left + (containerRect.width / 2);
+
+  let currentIndex = 0;
+  let minDistance = Infinity;
+
+  items.forEach((item, index) => {
+    const rect = item.getBoundingClientRect();
+    const center = rect.left + rect.width / 2;
+    const dist = Math.abs(center - containerCenter);
+    if (dist < minDistance) {
+      minDistance = dist;
+      currentIndex = index;
+    }
+  });
+
+  let targetIndex = currentIndex;
+
+  if (dragDirection === 'left') {
+    targetIndex = Math.min(currentIndex + 1, items.length - 1);
+  } else if (dragDirection === 'right') {
+    targetIndex = Math.max(currentIndex - 1, 0);
+  }
+
+  scrollToItem(items[targetIndex]);
+}
+
+// =========================
+
+// نفس القديمة
+function snapToClosest() {
+  const items = Array.from(container.querySelectorAll('.cooo.x-btn'));
+  if (items.length === 0) return;
 
   const containerRect = container.getBoundingClientRect();
   const containerCenter = containerRect.left + (containerRect.width / 2);
 
   let targetItem = null;
+  let minDistance = Infinity;
 
-  if (dragDirection === 'left') {
-    let minLeftDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const distance = Math.abs(rect.left - (containerRect.left + containerPaddingLeft));
-      if (distance < minLeftDistance) {
-        minLeftDistance = distance;
-        targetItem = item;
-      }
-    });
-  } else if (dragDirection === 'right') {
-    let minRightDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const distance = Math.abs(rect.right - (containerRect.right - containerPaddingRight));
-      if (distance < minRightDistance) {
-        minRightDistance = distance;
-        targetItem = item;
-      }
-    });
-  } else {
-    let minCenterDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const itemCenter = rect.left + (rect.width / 2);
-      const distance = Math.abs(itemCenter - containerCenter);
-      if (distance < minCenterDistance) {
-        minCenterDistance = distance;
-        targetItem = item;
-      }
-    });
-  }
-
-  if (targetItem) {
-    const targetRect = targetItem.getBoundingClientRect();
-    const itemIndex = items.indexOf(targetItem);
-    const isFirst = itemIndex === 0;
-    const isLast = itemIndex === items.length - 1;
-
-    let scrollOffset;
-
-    if (isFirst) {
-      scrollOffset = container.scrollLeft + (targetRect.left - containerRect.left) - containerPaddingLeft;
-    } else if (isLast) {
-      scrollOffset = container.scrollLeft + (targetRect.right - containerRect.right) + containerPaddingRight;
-    } else {
-      const targetCenter = targetRect.left + (targetRect.width / 2);
-      const containerCenterOffset = containerRect.left + (containerRect.width / 2);
-      scrollOffset = container.scrollLeft + (targetCenter - containerCenterOffset);
+  items.forEach(item => {
+    const rect = item.getBoundingClientRect();
+    const center = rect.left + rect.width / 2;
+    const dist = Math.abs(center - containerCenter);
+    if (dist < minDistance) {
+      minDistance = dist;
+      targetItem = item;
     }
+  });
 
-    container.scrollTo({
-      left: scrollOffset,
-      behavior: 'smooth'
-    });
-  }
+  if (targetItem) scrollToItem(targetItem);
+}
+
+// =========================
+
+// دالة التمرير الموحدة
+function scrollToItem(item) {
+  const rect = item.getBoundingClientRect();
+  const containerRect = container.getBoundingClientRect();
+
+  const itemCenter = rect.left + rect.width / 2;
+  const containerCenter = containerRect.left + containerRect.width / 2;
+
+  const offset = container.scrollLeft + (itemCenter - containerCenter);
+
+  container.scrollTo({
+    left: offset,
+    behavior: 'smooth'
+  });
 }
 
 // =========================
