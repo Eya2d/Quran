@@ -7,7 +7,7 @@ body::after {
     /* position: fixed; */
     user-select: none;
     z-index: 1;
-    content: 'جميع الحقوق محفوظة لدى طبيبك';
+    content: 'جميع الحقوق محفوظة لدى نور القرآن';
     bottom: 0;
     left: 0;
     width: 100%;
