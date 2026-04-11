@@ -257,9 +257,10 @@
     .sugg-info {
       flex: 1;
       padding: 10px 0px 10px 12px;
+      padding-bottom: 5px;
       display: flex;
       flex-direction: column;
-      justify-content: center;
+      /* justify-content: center; */
       gap: 4px;
     }
 
@@ -422,6 +423,7 @@ const params  = new URLSearchParams(location.search);
   catEl.textContent   = cat;
   idBadge.textContent = videoId || '—';
 
+  // ===== قائمة الفيديوهات =====
   const catVideos  = DATA[cat] || [];
   const currentIdx = catVideos.findIndex(v => v.id === videoId);
   const nextVideo  = catVideos[currentIdx + 1] || null;
@@ -437,6 +439,7 @@ const params  = new URLSearchParams(location.search);
         const data = JSON.parse(e.data);
         if (data.event === 'infoDelivery' && data.info && data.info.playerState !== undefined) {
           const state = data.info.playerState;
+
           if (state === 1) {
             isPlaying = true;
             await requestWakeLock();
@@ -475,19 +478,18 @@ const params  = new URLSearchParams(location.search);
     });
 
     // ===== بناء قائمة المقترحات =====
-    // الفيديو الحالي في مكانه الأصلي أولاً، ثم ما بعده بالترتيب
-    // العدد الكلي = 10 (بما فيهم الفيديو الحالي)
-    const TOTAL = 10;
-    const currentVideo = catVideos[currentIdx];
-    const afterCurrent = catVideos.slice(currentIdx + 1);          // ما بعد الحالي
-    const beforeCurrent = catVideos.slice(0, currentIdx);           // ما قبل الحالي
+    // الفيديو السابق (واحد فقط إن وُجد) + الفيديو الحالي + ما بعده
+    // الهدف: الحالي يظهر في مكانه الطبيعي، وفوقه السابق فقط، وتحته التالية بالترتيب
+    // العدد الإجمالي = 10 (نفس العدد السابق)
+    const prevVideo  = currentIdx > 0 ? catVideos[currentIdx - 1] : null;
+    const afterCurrent = catVideos.slice(currentIdx + 1, currentIdx + 9); // 9 بعده
 
-    // نملأ: الحالي + ما بعده + ما قبله (لو احتجنا تكملة)
-    const pool = [
-      ...(currentVideo ? [currentVideo] : []),
-      ...afterCurrent,
-      ...beforeCurrent,
-    ].slice(0, TOTAL);
+    // البناء: السابق (إن وُجد) + الحالي + ما بعده
+    const rawPool = [
+      ...(prevVideo ? [prevVideo] : []),
+      catVideos[currentIdx],           // الفيديو الحالي في مكانه
+      ...afterCurrent
+    ].slice(0, 10);                    // لا يتجاوز 10
 
     function renderSugg(list) {
       if (!list.length) {
@@ -497,22 +499,22 @@ const params  = new URLSearchParams(location.search);
       suggList.innerHTML = list.map((v, i) => {
         const isCurrent = v.id === videoId;
         return `
-          <a class="sugg-card${isCurrent ? ' coco2' : ''}"
-             href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
-             style="animation-delay:${i * 50}ms"
-             onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g, '&quot;')})">
-            <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
-            <div class="sugg-info">
-              <div class="sugg-title" id="st-${v.id}">${v.title}</div>
-              <span class="sugg-cat">${v.category}</span>
-            </div>
-          </a>`;
+        <a class="sugg-card${isCurrent ? ' coco2' : ''}"
+           href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
+           style="animation-delay:${i * 50}ms"
+           onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+          <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
+          <div class="sugg-info">
+            <div class="sugg-title" id="st-${v.id}">${v.title}</div>
+            <span class="sugg-cat">${v.category}</span>
+          </div>
+        </a>`;
       }).join('');
     }
 
-    renderSugg(pool);
+    renderSugg(rawPool);
 
-    enrichVideos(pool.filter(v => v.id !== videoId)).then(enriched => {
+    enrichVideos(rawPool).then(enriched => {
       enriched.forEach(v => {
         const el = document.getElementById('st-' + v.id);
         if (el) el.textContent = v.title;
