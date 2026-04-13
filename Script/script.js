@@ -8,6 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteHistoryBtn = document.getElementById('delete-history');
 
   let activeFilter = 'الكل';
+  let isLoadingData = false; // لمنع التحميل المتكرر
 
   // Function to update placeholder based on active filter
   function updatePlaceholder() {
@@ -27,9 +28,55 @@ document.addEventListener("DOMContentLoaded", () => {
     filterDiv.appendChild(div);
   });
 
-  // ===== نسخ البيانات محليًا =====
-  let localData = { الكل: [...DATA.الكل] };
-  CATEGORIES.forEach(cat => { localData[cat] = [...(DATA[cat] || [])]; });
+  // ===== نسخ البيانات محليًا (فارغة في البداية) =====
+  let localData = { الكل: [] };
+  CATEGORIES.forEach(cat => { localData[cat] = []; });
+
+  // ===== دالة لتحميل البيانات عند الحاجة =====
+  async function ensureDataLoaded(category) {
+    if (isLoadingData) return false;
+    
+    // إذا كانت البيانات موجودة بالفعل
+    if (localData[category] && localData[category].length > 0) {
+      return true;
+    }
+    
+    isLoadingData = true;
+    
+    try {
+      // عرض رسالة تحميل
+      if (category === 'الكل') {
+        resultsGrid.innerHTML = '<p class="no-results">جاري تحميل جميع البيانات...</p>';
+      } else {
+        resultsGrid.innerHTML = `<p class="no-results">جاري تحميل قسم ${category}...</p>`;
+      }
+      resultsDiv.classList.add('active');
+      
+      // تحميل البيانات من Proxy (Lazy Loading)
+      const data = DATA[category];
+      
+      if (data && data.length > 0) {
+        localData[category] = [...data];
+        
+        // إذا كان التحميل للكل، قم بتحديث باقي الأقسام أيضًا
+        if (category === 'الكل') {
+          CATEGORIES.forEach(cat => {
+            if (DATA[cat] && DATA[cat].length > 0 && (!localData[cat] || localData[cat].length === 0)) {
+              localData[cat] = [...DATA[cat]];
+            }
+          });
+        }
+        
+        return true;
+      }
+      return false;
+    } catch (error) {
+      console.error("خطأ في تحميل البيانات:", error);
+      return false;
+    } finally {
+      isLoadingData = false;
+    }
+  }
 
   // ===== RENDER HISTORY =====
   function renderHistory() {
@@ -46,9 +93,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return `
         <a class="cooo x-btn" href="watch.html?id=${v.id}&cat=${cat}"
            onclick="addToWatchHistory(${safeV})">
-          <imga><img src="${thumb}" alt="${v.title}" loading="lazy" /></imga>
+          <imga><img src="${thumb}" alt="${v.title || 'فيديو'}" loading="lazy" /></imga>
           <div class="history-card-info">
-            <div class="history-card-title">${v.title}</div>
+            <div class="history-card-title">${v.title || 'فيديو'}</div>
             <span class="history-time">${ago}</span>
           </div>
         </a>`;
@@ -76,24 +123,44 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ===== SEARCH =====
-  function doSearch(q) {
+  async function doSearch(q) {
     q = q.trim();
     if (!q) {
       resultsDiv.classList.remove('active');
       resultsGrid.innerHTML = '';
       return;
     }
+    
     resultsDiv.classList.add('active');
 
+    // التحقق من مطابقة النص مع اسم قسم (للانتقال المباشر)
     const catMatch = CATEGORIES.find(k => k === q);
     if (catMatch && activeFilter === 'الكل') {
       window.location.href = `section.html?cat=${encodeURIComponent(catMatch)}`;
       return;
     }
 
+    // التأكد من تحميل البيانات قبل البحث
+    const dataLoaded = await ensureDataLoaded(activeFilter);
+    if (!dataLoaded && activeFilter !== 'الكل') {
+      resultsGrid.innerHTML = '<p class="no-results">فشل تحميل البيانات. حاول مرة أخرى.</p>';
+      return;
+    }
+    
+    // إذا كان الفلتر "الكل" ولم يتم تحميل البيانات بعد
+    if (activeFilter === 'الكل' && (!localData.الكل || localData.الكل.length === 0)) {
+      await ensureDataLoaded('الكل');
+    }
+
     const pool = activeFilter === 'الكل' ? localData.الكل : (localData[activeFilter] || []);
+    
+    if (!pool.length) {
+      resultsGrid.innerHTML = '<p class="no-results">لا توجد بيانات متاحة</p>';
+      return;
+    }
+    
     const results = pool.filter(v =>
-      v.title.includes(q) || v.category.includes(q)
+      v.title && (v.title.includes(q) || v.category.includes(q))
     ).slice(0, 10);
 
     if (!results.length) {
@@ -107,19 +174,24 @@ document.addEventListener("DOMContentLoaded", () => {
       return `
         <a class="coopp" href="watch.html?id=${v.id}&cat=${cat}"
            onclick="addToWatchHistory(${safeV})">
-          <imga><img src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" /></imga>
+          <imga><img src="${getYoutubeThumbnail(v.id)}" alt="${v.title || 'فيديو'}" loading="lazy" /></imga>
           <div class="vid-card-info">
-            <div class="vid-card-title">${v.title}</div>
+            <div class="vid-card-title">${v.title || 'فيديو'}</div>
             <div class="vid-card-cat">${v.category}</div>
           </div>
         </a>`;
     }).join('');
   }
 
-  searchInput.addEventListener('input', () => doSearch(searchInput.value));
+  // ربط حدث البحث مع تأخير بسيط لتحسين الأداء
+  let searchTimeout;
+  searchInput.addEventListener('input', () => {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => doSearch(searchInput.value), 300);
+  });
 
   // ===== FILTER ANCHORS (ديناميكي) =====
-  filterDiv.addEventListener('click', (e) => {
+  filterDiv.addEventListener('click', async (e) => {
     const div = e.target.closest('div[data-cat]');
     if (!div) return;
   
@@ -127,29 +199,34 @@ document.addEventListener("DOMContentLoaded", () => {
     div.classList.add('coco');
   
     activeFilter = div.dataset.cat;
-    
     updatePlaceholder();
+    
+    // تحميل بيانات القسم الجديد إذا لزم الأمر
+    if (activeFilter !== 'الكل' && (!localData[activeFilter] || localData[activeFilter].length === 0)) {
+      resultsGrid.innerHTML = '<p class="no-results">جاري تحميل القسم...</p>';
+      resultsDiv.classList.add('active');
+      await ensureDataLoaded(activeFilter);
+    }
     
     doSearch(searchInput.value);
   });
 
   // ===== INIT =====
   renderHistory();
-  
-  // Set initial placeholder
   updatePlaceholder();
-
-  enrichVideos(DATA.الكل).then(enriched => {
-    localData.الكل = enriched;
-    enriched.forEach(v => {
-      CATEGORIES.forEach(cat => {
-        if (!localData[cat]) return;
-        const idx = localData[cat].findIndex(d => d.id === v.id);
-        if (idx !== -1) localData[cat][idx].title = v.title;
-      });
-    });
-    if (searchInput.value.trim()) doSearch(searchInput.value);
-  });
+  
+  // تحميل الأقسام ذات الأولوية في الخلفية (بدون إزعاج المستخدم)
+  setTimeout(async () => {
+    const priorityCats = ["مشاري العفاسي", "عبد الباسط عبد الصمد", "ماهر المعيقلي"];
+    for (const cat of priorityCats) {
+      if (!localData[cat] || localData[cat].length === 0) {
+        const data = DATA[cat];
+        if (data && data.length) {
+          localData[cat] = [...data];
+        }
+      }
+    }
+  }, 1000);
 });
 
 
