@@ -221,20 +221,6 @@
       border-radius: 10px;
       box-shadow: 0 0 0 2px #1589f5 inset;
     }
-
-    /* ===== عداد الوقت ===== */
-    .time-display {
-      font-size: 12px;
-      font-weight: 600;
-      color: #2b2b30d4;
-      font-family: 'Cairo', monospace;
-      white-space: nowrap;
-      min-width: 60px;
-      text-align: center;
-      direction: ltr;
-      user-select: none;
-    }
-
     .player3 {
       width: 40px;
       height: 40px;
@@ -275,6 +261,19 @@
     }
     .player-open:hover {
       background-color: rgba(255, 255, 255, 0.11);
+    }
+
+    /* ===== عرض الوقت المتبقي ===== */
+    .time-display {
+      font-size: 12px;
+      font-weight: 600;
+      color: #2b2b30d4;
+      white-space: nowrap;
+      min-width: 50px;
+      text-align: center;
+      direction: ltr;
+      font-family: 'Cairo', monospace;
+      margin: 0 4px;
     }
 
     .video-meta {
@@ -489,7 +488,7 @@
       <div class="player-mp3">
         <button class="player1"><span class="btn-spinner"></span></button>
         <div class="playe2"><a></a></div>
-        <a class="time-display">00:00:00</a>
+        <a class="time-display" id="time-remaining">0:00</a>
         <button class="player3"><ion-icon name="chevron-expand"></ion-icon></button>
       </div>
     </div>
@@ -543,35 +542,33 @@
   const suggList    = document.getElementById('suggested-list');
   const autoNextBtn = document.getElementById('auto-next-btn');
 
-  const playerOpenBtn = document.querySelector('.player-open');
-  const playPauseBtn  = document.querySelector('.player1');
-  const progressBar   = document.querySelector('.playe2');
-  const progressFill  = document.querySelector('.playe2 a');
-  const closeBtn      = document.querySelector('.player3');
-  const timeDisplay   = document.querySelector('.time-display');
+  const playerOpenBtn  = document.querySelector('.player-open');
+  const playPauseBtn   = document.querySelector('.player1');
+  const progressBar    = document.querySelector('.playe2');
+  const progressFill   = document.querySelector('.playe2 a');
+  const closeBtn       = document.querySelector('.player3');
+  const timeRemaining  = document.getElementById('time-remaining');
 
-  // ===== دالة تنسيق الوقت =====
+  // ===== تنسيق الوقت =====
+  // يُظهر MM:SS فقط إذا كان الوقت أقل من ساعة
+  // يُظهر H:MM:SS إذا كان ساعة أو أكثر
   function formatTime(seconds) {
-    if (!seconds || isNaN(seconds) || seconds < 0) return '00:00:00';
+    if (isNaN(seconds) || seconds < 0) seconds = 0;
     const totalSec = Math.floor(seconds);
     const h = Math.floor(totalSec / 3600);
     const m = Math.floor((totalSec % 3600) / 60);
     const s = totalSec % 60;
-    return (
-      String(h).padStart(2, '0') + ':' +
-      String(m).padStart(2, '0') + ':' +
-      String(s).padStart(2, '0')
-    );
+    const mm = String(m).padStart(2, '0');
+    const ss = String(s).padStart(2, '0');
+    if (h > 0) {
+      return h + ':' + mm + ':' + ss;
+    }
+    return mm + ':' + ss;
   }
 
-  // ===== تحديث عداد الوقت المتبقي =====
   function updateTimeDisplay() {
-    if (ytDuration > 0 && ytCurrentTime >= 0) {
-      const remaining = ytDuration - ytCurrentTime;
-      timeDisplay.textContent = formatTime(remaining);
-    } else {
-      timeDisplay.textContent = '00:00:00';
-    }
+    const remaining = ytDuration > 0 ? Math.max(0, ytDuration - ytCurrentTime) : 0;
+    timeRemaining.textContent = formatTime(remaining);
   }
 
   // ===== helpers: spinner / icon =====
@@ -604,22 +601,21 @@
 
   // ===== شريط التقدم =====
   function setProgressFromEvent(e) {
-    const rect   = progressBar.getBoundingClientRect();
+    const rect    = progressBar.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     let ratio = (clientX - rect.left) / rect.width;
     ratio = Math.max(0, Math.min(1, ratio));
     progressFill.style.width = (ratio * 100) + '%';
     if (ytDuration > 0) {
-      ytCurrentTime = ratio * ytDuration;
+      const seekTo = Math.floor(ratio * ytDuration);
+      ytCurrentTime = seekTo;
       updateTimeDisplay();
-    }
-    try {
-      if (ytDuration > 0) {
+      try {
         player.contentWindow.postMessage(
-          JSON.stringify({ event: 'command', func: 'seekTo', args: [Math.floor(ratio * ytDuration), true] }), '*'
+          JSON.stringify({ event: 'command', func: 'seekTo', args: [seekTo, true] }), '*'
         );
-      }
-    } catch (_) {}
+      } catch (_) {}
+    }
   }
   progressBar.addEventListener('mousedown', e => { isDragging = true; setProgressFromEvent(e); e.preventDefault(); });
   document.addEventListener('mousemove',   e => { if (isDragging) setProgressFromEvent(e); });
@@ -663,8 +659,8 @@
     ytCurrentTime = 0;
     isPlaying     = false;
     mp3Playing    = false;
-    progressFill.style.width = '0%';
-    timeDisplay.textContent  = '00:00:00';
+    progressFill.style.width     = '0%';
+    timeRemaining.textContent    = '0:00';
     showSpinner();
     document.body.classList.remove('xoox');
 
@@ -719,6 +715,7 @@
 
         if (info.duration !== undefined && info.duration > 0) {
           ytDuration = info.duration;
+          updateTimeDisplay();
         }
 
         if (info.currentTime !== undefined && ytDuration > 0 && !isDragging) {
@@ -756,7 +753,8 @@
             isPlaying     = false;
             mp3Playing    = false;
             ytCurrentTime = ytDuration;
-            timeDisplay.textContent = '00:00:00';
+            timeRemaining.textContent = '0:00';
+            progressFill.style.width  = '100%';
             showPlayIcon();
             await releaseWakeLock();
 
