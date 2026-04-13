@@ -7,6 +7,7 @@
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&amp;display=swap" rel="stylesheet">
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <style>
     :root {
     --bg: #0a0a0f;
@@ -130,6 +131,121 @@
       height: 100%;
       border: none;
     }
+
+    /* player-mp3 */
+    .player-mp3 {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      padding: 0 7px;
+      background: #faf9f4;
+      border-radius: 25px;
+      margin: 3px;
+      box-shadow: 0px 1px 3px #8888aa5c;
+      display: none;
+      z-index: 20;
+    }
+
+    /* عند إضافة كلاس xoox للـ body يظهر player-mp3 */
+    body.xoox .player-mp3 {
+      display: flex !important;
+    }
+
+    /* عند xoox إخفاء الـ iframe وإظهار الخلفية فقط */
+    body.xoox .player-wrap {
+      padding-top: 60px;
+    }
+    body.xoox .player-wrap iframe {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .player1 {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 30px;
+      background: rgb(21, 137, 245);
+      color: #fff;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .playe2 {
+      flex: 1 1;
+      height: 6px;
+      margin: 0 10px;
+      border-radius: 5px;
+      background: #8888aa21;
+      text-align: -webkit-left;
+      cursor: pointer;
+      position: relative;
+      touch-action: none;
+    }
+    .playe2 a {
+      position: relative;
+      height: 100%;
+      display: block;
+      width: 0%;
+      background: rgb(21, 137, 245);
+      display: flex;
+      align-items: center;
+      border-radius: 5px;
+      pointer-events: none;
+    }
+    .playe2 a::after {
+      position: absolute;
+      z-index: 5;
+      content: '';
+      right: -7.5px;
+      padding: 7.5px;
+      background: #ffffff;
+      border-radius: 10px;
+      box-shadow: 0 0 0 2px #1589f5 inset;
+    }
+    .player3 {
+      width: 40px;
+      height: 40px;
+      border: none;
+      border-radius: 30px;
+      background: #0000;
+      color: #2b2b30d4;
+      font-size: 22px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .player3:hover {
+      background-color: #25262913;
+    }
+
+    /* player-open */
+    .player-open {
+      position: absolute;
+      z-index: 10;
+      top: 0;
+      left: 0;
+      width: 34px;
+      height: 34px;
+      font-size: 24px;
+      border: none;
+      background: #0000;
+      color: white;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
 
     .video-meta {
       margin-top: 20px;
@@ -307,6 +423,10 @@
       background: #0085c736 !important;
       outline: 5px solid #0085c736 !important;
     }
+
+    .xoox .player-wrap {
+      background-color: #0000;
+    }
   </style>
 </head>
 <body>
@@ -330,6 +450,7 @@
 
     <!-- PLAYER -->
     <div class="player-wrap">
+      <button class="player-open"><ion-icon name="chevron-collapse"></ion-icon></button>
       <iframe
         id="yt-player"
         src=""
@@ -337,6 +458,12 @@
         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
         allowfullscreen>
       </iframe>
+      
+      <div class="player-mp3">
+        <button class="player1"><ion-icon name="play-outline"></ion-icon></button>
+        <div class="playe2"><a></a></div>
+        <button class="player3"><ion-icon name="chevron-expand"></ion-icon></button>
+      </div>
     </div>
 
     <!-- META -->
@@ -379,6 +506,86 @@ const params  = new URLSearchParams(location.search);
   const suggList    = document.getElementById('suggested-list');
   const autoNextBtn = document.getElementById('auto-next-btn');
 
+  // ===== عناصر player-mp3 =====
+  const playerOpenBtn = document.querySelector('.player-open');
+  const playerMp3     = document.querySelector('.player-mp3');
+  const playPauseBtn  = document.querySelector('.player1');
+  const progressBar   = document.querySelector('.playe2');
+  const progressFill  = document.querySelector('.playe2 a');
+  const closeBtn      = document.querySelector('.player3');
+
+  // ===== فتح وضع MP3 عند النقر على player-open =====
+  playerOpenBtn.addEventListener('click', () => {
+    document.body.classList.add('xoox');
+  });
+
+  // ===== إغلاق وضع MP3 عند النقر على player3 =====
+  closeBtn.addEventListener('click', () => {
+    document.body.classList.remove('xoox');
+  });
+
+  // ===== شريط التقدم (يعمل باللمس والنقر) =====
+  let isDragging = false;
+
+  function setProgressFromEvent(e) {
+    const rect = progressBar.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let ratio = (clientX - rect.left) / rect.width;
+    ratio = Math.max(0, Math.min(1, ratio));
+    progressFill.style.width = (ratio * 100) + '%';
+    // إرسال أمر seek لليوتيوب
+    try {
+      const duration = ytDuration || 0;
+      if (duration > 0) {
+        const seekTo = Math.floor(ratio * duration);
+        player.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'seekTo', args: [seekTo, true] }), '*'
+        );
+      }
+    } catch (_) {}
+  }
+
+  // Mouse events
+  progressBar.addEventListener('mousedown', (e) => {
+    isDragging = true;
+    setProgressFromEvent(e);
+    e.preventDefault();
+  });
+  document.addEventListener('mousemove', (e) => {
+    if (isDragging) setProgressFromEvent(e);
+  });
+  document.addEventListener('mouseup', () => { isDragging = false; });
+
+  // Touch events
+  progressBar.addEventListener('touchstart', (e) => {
+    isDragging = true;
+    setProgressFromEvent(e);
+  }, { passive: true });
+  document.addEventListener('touchmove', (e) => {
+    if (isDragging) setProgressFromEvent(e);
+  }, { passive: true });
+  document.addEventListener('touchend', () => { isDragging = false; });
+
+  // ===== زر التشغيل/إيقاف =====
+  let mp3Playing = false;
+  playPauseBtn.addEventListener('click', () => {
+    try {
+      if (mp3Playing) {
+        player.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*'
+        );
+        playPauseBtn.innerHTML = '<ion-icon name="play-outline"></ion-icon>';
+        mp3Playing = false;
+      } else {
+        player.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*'
+        );
+        playPauseBtn.innerHTML = '<ion-icon name="pause-outline"></ion-icon>';
+        mp3Playing = true;
+      }
+    } catch (_) {}
+  });
+
   // ===== Wake Lock: منع إغلاق الشاشة =====
   let wakeLock = null;
 
@@ -406,6 +613,8 @@ const params  = new URLSearchParams(location.search);
   // ===== حالة الانتقال التلقائي =====
   let autoNext = localStorage.getItem('autoNext') === 'true';
   let isPlaying = false;
+  let ytDuration = 0;
+  let ytCurrentTime = 0;
 
   function applyAutoNextStyle() {
     autoNextBtn.classList.toggle('active', autoNext);
@@ -437,22 +646,44 @@ const params  = new URLSearchParams(location.search);
     window.addEventListener('message', async (e) => {
       try {
         const data = JSON.parse(e.data);
-        if (data.event === 'infoDelivery' && data.info && data.info.playerState !== undefined) {
-          const state = data.info.playerState;
+        if (data.event === 'infoDelivery' && data.info) {
+          const info = data.info;
 
-          if (state === 1) {
-            isPlaying = true;
-            await requestWakeLock();
+          // تحديث مدة الفيديو
+          if (info.duration !== undefined && info.duration > 0) {
+            ytDuration = info.duration;
           }
-          if (state === 2 || state === -1) {
-            isPlaying = false;
-            await releaseWakeLock();
+
+          // تحديث الوقت الحالي وشريط التقدم
+          if (info.currentTime !== undefined && ytDuration > 0 && !isDragging) {
+            ytCurrentTime = info.currentTime;
+            const ratio = ytCurrentTime / ytDuration;
+            progressFill.style.width = (ratio * 100) + '%';
           }
-          if (state === 0) {
-            isPlaying = false;
-            await releaseWakeLock();
-            if (autoNext && nextVideo) {
-              window.location.href = `watch.html?id=${nextVideo.id}&cat=${encodeURIComponent(nextVideo.category)}`;
+
+          if (info.playerState !== undefined) {
+            const state = info.playerState;
+
+            if (state === 1) {
+              isPlaying = true;
+              mp3Playing = true;
+              playPauseBtn.innerHTML = '<ion-icon name="pause-outline"></ion-icon>';
+              await requestWakeLock();
+            }
+            if (state === 2 || state === -1) {
+              isPlaying = false;
+              mp3Playing = false;
+              playPauseBtn.innerHTML = '<ion-icon name="play-outline"></ion-icon>';
+              await releaseWakeLock();
+            }
+            if (state === 0) {
+              isPlaying = false;
+              mp3Playing = false;
+              playPauseBtn.innerHTML = '<ion-icon name="play-outline"></ion-icon>';
+              await releaseWakeLock();
+              if (autoNext && nextVideo) {
+                window.location.href = `watch.html?id=${nextVideo.id}&cat=${encodeURIComponent(nextVideo.category)}`;
+              }
             }
           }
         }
@@ -478,18 +709,14 @@ const params  = new URLSearchParams(location.search);
     });
 
     // ===== بناء قائمة المقترحات =====
-    // الفيديو السابق (واحد فقط إن وُجد) + الفيديو الحالي + ما بعده
-    // الهدف: الحالي يظهر في مكانه الطبيعي، وفوقه السابق فقط، وتحته التالية بالترتيب
-    // العدد الإجمالي = 10 (نفس العدد السابق)
     const prevVideo  = currentIdx > 0 ? catVideos[currentIdx - 1] : null;
-    const afterCurrent = catVideos.slice(currentIdx + 1, currentIdx + 9); // 9 بعده
+    const afterCurrent = catVideos.slice(currentIdx + 1, currentIdx + 9);
 
-    // البناء: السابق (إن وُجد) + الحالي + ما بعده
     const rawPool = [
       ...(prevVideo ? [prevVideo] : []),
-      catVideos[currentIdx],           // الفيديو الحالي في مكانه
+      catVideos[currentIdx],
       ...afterCurrent
-    ].slice(0, 10);                    // لا يتجاوز 10
+    ].slice(0, 10);
 
     function renderSugg(list) {
       if (!list.length) {
