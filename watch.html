@@ -6,8 +6,7 @@
   <link rel="stylesheet" href="Style/body.css">
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&amp;display=swap" rel="stylesheet">
-  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
   <style>
     :root {
     --bg: #0a0a0f;
@@ -193,6 +192,7 @@
       flex: 1 1;
       height: 6px;
       margin: 0 10px;
+      margin-left: 14px;
       border-radius: 5px;
       background: #8888aa21;
       text-align: -webkit-left;
@@ -221,6 +221,20 @@
       border-radius: 10px;
       box-shadow: 0 0 0 2px #1589f5 inset;
     }
+
+    /* ===== عداد الوقت ===== */
+    .time-display {
+      font-size: 12px;
+      font-weight: 600;
+      color: #2b2b30d4;
+      font-family: 'Cairo', monospace;
+      white-space: nowrap;
+      min-width: 60px;
+      text-align: center;
+      direction: ltr;
+      user-select: none;
+    }
+
     .player3 {
       width: 40px;
       height: 40px;
@@ -246,9 +260,11 @@
       z-index: 10;
       top: 0;
       left: 0;
-      width: 34px;
-      height: 34px;
+      width: 40px;
+      height: 40px;
       font-size: 24px;
+      border-radius: 25px;
+      margin: 5px;
       border: none;
       background: #0000;
       color: white;
@@ -256,6 +272,9 @@
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+    .player-open:hover {
+      background-color: rgba(255, 255, 255, 0.11);
     }
 
     .video-meta {
@@ -470,6 +489,7 @@
       <div class="player-mp3">
         <button class="player1"><span class="btn-spinner"></span></button>
         <div class="playe2"><a></a></div>
+        <a class="time-display">00:00:00</a>
         <button class="player3"><ion-icon name="chevron-expand"></ion-icon></button>
       </div>
     </div>
@@ -493,7 +513,7 @@
   <aside class="sidebar">
     <div class="sidebar-title">مقترحات من نفس القسم</div>
     <div class="suggested-list" id="suggested-list">
-      <div class="loading-state">⏳ جاري التحميل...</div>
+      <div class="loading-state">جاري التحميل...</div>
     </div>
   </aside>
 
@@ -512,7 +532,7 @@
   let isDragging      = false;
   let wakeLock        = null;
   let pollInterval    = null;
-  let videoReady      = false; // هل استقبلنا أول حالة تشغيل؟
+  let videoReady      = false;
 
   // ===== عناصر ثابتة =====
   const player      = document.getElementById('yt-player');
@@ -528,6 +548,31 @@
   const progressBar   = document.querySelector('.playe2');
   const progressFill  = document.querySelector('.playe2 a');
   const closeBtn      = document.querySelector('.player3');
+  const timeDisplay   = document.querySelector('.time-display');
+
+  // ===== دالة تنسيق الوقت =====
+  function formatTime(seconds) {
+    if (!seconds || isNaN(seconds) || seconds < 0) return '00:00:00';
+    const totalSec = Math.floor(seconds);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    return (
+      String(h).padStart(2, '0') + ':' +
+      String(m).padStart(2, '0') + ':' +
+      String(s).padStart(2, '0')
+    );
+  }
+
+  // ===== تحديث عداد الوقت المتبقي =====
+  function updateTimeDisplay() {
+    if (ytDuration > 0 && ytCurrentTime >= 0) {
+      const remaining = ytDuration - ytCurrentTime;
+      timeDisplay.textContent = formatTime(remaining);
+    } else {
+      timeDisplay.textContent = '00:00:00';
+    }
+  }
 
   // ===== helpers: spinner / icon =====
   function showSpinner() {
@@ -564,6 +609,10 @@
     let ratio = (clientX - rect.left) / rect.width;
     ratio = Math.max(0, Math.min(1, ratio));
     progressFill.style.width = (ratio * 100) + '%';
+    if (ytDuration > 0) {
+      ytCurrentTime = ratio * ytDuration;
+      updateTimeDisplay();
+    }
     try {
       if (ytDuration > 0) {
         player.contentWindow.postMessage(
@@ -581,7 +630,7 @@
 
   // ===== زر التشغيل / إيقاف =====
   playPauseBtn.addEventListener('click', () => {
-    if (!videoReady) return; // لا تستجب قبل جهوزية الفيديو
+    if (!videoReady) return;
     try {
       if (mp3Playing) {
         player.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
@@ -615,6 +664,7 @@
     isPlaying     = false;
     mp3Playing    = false;
     progressFill.style.width = '0%';
+    timeDisplay.textContent  = '00:00:00';
     showSpinner();
     document.body.classList.remove('xoox');
 
@@ -667,11 +717,14 @@
       if (data.event === 'infoDelivery' && data.info) {
         const info = data.info;
 
-        if (info.duration !== undefined && info.duration > 0) ytDuration = info.duration;
+        if (info.duration !== undefined && info.duration > 0) {
+          ytDuration = info.duration;
+        }
 
         if (info.currentTime !== undefined && ytDuration > 0 && !isDragging) {
           ytCurrentTime = info.currentTime;
           progressFill.style.width = ((ytCurrentTime / ytDuration) * 100) + '%';
+          updateTimeDisplay();
         }
 
         if (info.playerState !== undefined) {
@@ -699,9 +752,11 @@
           }
 
           if (state === 0) { // انتهى
-            videoReady = true;
-            isPlaying  = false;
-            mp3Playing = false;
+            videoReady    = true;
+            isPlaying     = false;
+            mp3Playing    = false;
+            ytCurrentTime = ytDuration;
+            timeDisplay.textContent = '00:00:00';
             showPlayIcon();
             await releaseWakeLock();
 
@@ -808,7 +863,7 @@
   // ===== دعم زر الرجوع في المتصفح =====
   window.addEventListener('popstate', e => {
     if (e.state && e.state.vid) {
-      currentVideoId = null; // force reload
+      currentVideoId = null;
       loadVideo(e.state.vid, e.state.cat);
     }
   });
