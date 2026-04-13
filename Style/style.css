@@ -60,10 +60,11 @@ header {
     margin: 0 10px;
     direction: rtl;
     border: none;
-    font-size: 15px;
+    font-size: 14px;
     flex: 1 1;
     height: 100%;
     outline: none;
+    font-family: 'Cairo', sans-serif;
 }
 .searsh .flex {
     z-index: 5;
