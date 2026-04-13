@@ -2427,42 +2427,108 @@ async function enrichVideos(videos) {
   }));
 }
  
-// ===== DATA — Lazy Proxy =====
-// لا يُبنى أي قسم إلا عند أول طلب له → لا تجميد عند تحميل الصفحة
+// ===== DATA — Lazy Loader with Priority =====
+// البيانات لم تعد تُحمّل كلها عند بدء تشغيل الموقع.
+// بل تُحمّل كل قائمة (قسم) فقط عند طلبها أول مرة.
+
+// المخزن المؤقت للبيانات المحملة
 const _dataCache = {};
- 
-function _buildCat(cat) {
-  if (_dataCache[cat]) return _dataCache[cat];
-  const raw = cat === 'الكل'
-    ? CATEGORIES.flatMap(c => DATA_RAW[c] || [])
-    : (DATA_RAW[cat] || []);
+
+// دالة لتحميل قسم معين من DATA_RAW
+function _loadCategoryFromRaw(catName) {
+  if (_dataCache[catName]) return _dataCache[catName];
+  
+  const raw = DATA_RAW[catName] || [];
   const cache = getTitleCache();
-  _dataCache[cat] = raw
+  
+  _dataCache[catName] = raw
     .filter(v => cleanVideoId(v.id) !== "")
     .map(v => ({
       ...v,
       id: cleanVideoId(v.id),
       title: cache[cleanVideoId(v.id)] || "جاري التحميل..."
     }));
-  return _dataCache[cat];
+  
+  return _dataCache[catName];
 }
- 
+
+// قائمة الأقسام ذات الأولوية (تُحمّل في الخلفية)
+const PRIORITY_CATEGORIES = ["مشاري العفاسي", "عبد الباسط عبد الصمد", "ماهر المعيقلي"];
+
+// متغير لمنع التحميل المتكرر
+let _backgroundLoadStarted = false;
+
+// دالة لتحميل الأقسام ذات الأولوية في الخلفية
+function _startBackgroundLoading() {
+  if (_backgroundLoadStarted) return;
+  _backgroundLoadStarted = true;
+  
+  setTimeout(() => {
+    PRIORITY_CATEGORIES.forEach(cat => {
+      if (!_dataCache[cat]) {
+        _loadCategoryFromRaw(cat);
+      }
+    });
+  }, 500);
+}
+
+// ===== Proxy الرئيسي مع Lazy Loading =====
 const DATA = new Proxy({}, {
   get(_, prop) {
     // دعم القراءة العادية لمفاتيح مثل الكل أو أي قسم
     if (prop in _dataCache) return _dataCache[prop];
-    if (prop === 'الكل' || CATEGORIES.includes(prop)) return _buildCat(prop);
+    
+    if (prop === 'الكل') {
+      // "الكل" هو تجميع لكل الأقسام - لا يتم تحميله إلا عند الطلب
+      if (!_dataCache['الكل']) {
+        const allVideos = [];
+        for (const cat of CATEGORIES) {
+          const catVideos = DATA[cat];
+          if (catVideos && catVideos.length) {
+            allVideos.push(...catVideos);
+          }
+        }
+        _dataCache['الكل'] = allVideos;
+      }
+      return _dataCache['الكل'];
+    }
+    
+    if (CATEGORIES.includes(prop)) {
+      // التحميل الفوري للقسم المطلوب (Lazy Loading)
+      return _loadCategoryFromRaw(prop);
+    }
+    
     return undefined;
   },
+  
   set(_, prop, value) {
     // السماح بالتعديل من الخارج (مثل تحديث العناوين في section.html)
     _dataCache[prop] = value;
     return true;
   },
+  
   has(_, prop) {
     return prop === 'الكل' || CATEGORIES.includes(prop);
   }
 });
+
+// ===== تحميل الخلفية التلقائي =====
+// يبدأ تحميل الأقسام ذات الأولوية بعد تحميل الصفحة مباشرة
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', _startBackgroundLoading);
+  } else {
+    _startBackgroundLoading();
+  }
+}
+
+// دالة مساعدة لضمان تحميل قسم معين (للاستخدام في الصفحات الأخرى)
+async function ensureCategoryLoaded(catName) {
+  if (CATEGORIES.includes(catName) && (!_dataCache[catName] || _dataCache[catName].length === 0)) {
+    return _loadCategoryFromRaw(catName);
+  }
+  return DATA[catName] || [];
+}
  
 // ===== WATCH HISTORY =====
 function getWatchHistory() {
