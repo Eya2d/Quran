@@ -12,12 +12,10 @@
     :root {
     --bg: #0a0a0f;
     --surface: #13131a00;
-    /* --card: #1a1a24; */
     --border: #b8b8ba;
     --accent: #e63946;
     --accent2: #ff6b6b;
     --gold: #f4a261;
-    /* --text: #f0f0f5; */
     --muted: #8888aa;
     --radius: 14px;
     }
@@ -112,7 +110,6 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      /* box-shadow: 0 20px 60px rgba(0,0,0,.6); */
     }
     .player-wrap::before {
       position: absolute;
@@ -151,12 +148,10 @@
       z-index: 20;
     }
 
-    /* عند إضافة كلاس xoox للـ body يظهر player-mp3 */
     body.xoox .player-mp3 {
       display: flex !important;
     }
 
-    /* عند xoox إخفاء الـ iframe وإظهار الخلفية فقط */
     body.xoox .player-wrap {
       padding-top: 60px;
     }
@@ -179,6 +174,21 @@
       justify-content: center;
       flex-shrink: 0;
     }
+
+    /* ===== spinner داخل زر التشغيل ===== */
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .btn-spinner {
+      width: 18px;
+      height: 18px;
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin .7s linear infinite;
+      flex-shrink: 0;
+    }
+
     .playe2 {
       flex: 1 1;
       height: 6px;
@@ -247,7 +257,6 @@
       align-items: center;
       justify-content: center;
     }
-    
 
     .video-meta {
       margin-top: 20px;
@@ -359,7 +368,6 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .sugg-card:hover {
-      /* border-color: rgba(255, 145, 0, 0.74); */
       transform: translateX(-3px);
     }
 
@@ -369,7 +377,7 @@
       flex-shrink: 0;
       aspect-ratio: 16 / 9;
       object-fit: cover;
-    border-radius: 10px;
+      border-radius: 10px;
     }
 
     .sugg-info {
@@ -378,7 +386,6 @@
       padding-bottom: 5px;
       display: flex;
       flex-direction: column;
-      /* justify-content: center; */
       gap: 4px;
     }
 
@@ -440,11 +447,7 @@
   <a class="logo" href="index.html"><span>نـ</span>ور القرآن</a>
   <div class="nav-links">
     <a class="nav-btn" id="back-section" href="section.html?cat=%D8%A8%D8%B4%D8%B1%D8%A9">← القسم</a>
-    <a class="nav-btn" href="index.html" style="
-    background: #177ccb;
-    color: #fff;
-    border-color: #0000;
-">الرئيسية</a>
+    <a class="nav-btn" href="index.html" style="background:#177ccb;color:#fff;border-color:#0000;">الرئيسية</a>
   </div>
 </header>
 
@@ -465,7 +468,7 @@
       </iframe>
       
       <div class="player-mp3">
-        <button class="player1"><ion-icon name="play-outline"></ion-icon></button>
+        <button class="player1"><span class="btn-spinner"></span></button>
         <div class="playe2"><a></a></div>
         <button class="player3"><ion-icon name="chevron-expand"></ion-icon></button>
       </div>
@@ -499,10 +502,19 @@
 <script src="Script/app.js"></script>
 <script src="Script/data.js"></script>
 <script>
-const params  = new URLSearchParams(location.search);
-  const videoId = params.get('id');
-  const cat     = params.get('cat') || 'شائعة';
+  // ===== حالة عامة =====
+  let currentVideoId  = null;
+  let currentCat      = null;
+  let ytDuration      = 0;
+  let ytCurrentTime   = 0;
+  let isPlaying       = false;
+  let mp3Playing      = false;
+  let isDragging      = false;
+  let wakeLock        = null;
+  let pollInterval    = null;
+  let videoReady      = false; // هل استقبلنا أول حالة تشغيل؟
 
+  // ===== عناصر ثابتة =====
   const player      = document.getElementById('yt-player');
   const titleEl     = document.getElementById('video-title');
   const catEl       = document.getElementById('video-cat');
@@ -511,217 +523,211 @@ const params  = new URLSearchParams(location.search);
   const suggList    = document.getElementById('suggested-list');
   const autoNextBtn = document.getElementById('auto-next-btn');
 
-  // ===== عناصر player-mp3 =====
   const playerOpenBtn = document.querySelector('.player-open');
-  const playerMp3     = document.querySelector('.player-mp3');
   const playPauseBtn  = document.querySelector('.player1');
   const progressBar   = document.querySelector('.playe2');
   const progressFill  = document.querySelector('.playe2 a');
   const closeBtn      = document.querySelector('.player3');
 
-  // ===== فتح وضع MP3 عند النقر على player-open =====
-  playerOpenBtn.addEventListener('click', () => {
-    document.body.classList.add('xoox');
+  // ===== helpers: spinner / icon =====
+  function showSpinner() {
+    playPauseBtn.innerHTML = '<span class="btn-spinner"></span>';
+  }
+  function showPlayIcon() {
+    playPauseBtn.innerHTML = '<ion-icon name="play-outline"></ion-icon>';
+  }
+  function showPauseIcon() {
+    playPauseBtn.innerHTML = '<ion-icon name="pause-outline"></ion-icon>';
+  }
+
+  // ===== Wake Lock =====
+  async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) return;
+    try { wakeLock = await navigator.wakeLock.request('screen'); } catch (_) {}
+  }
+  async function releaseWakeLock() {
+    if (!wakeLock) return;
+    try { await wakeLock.release(); wakeLock = null; } catch (_) {}
+  }
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && isPlaying) await requestWakeLock();
   });
 
-  // ===== إغلاق وضع MP3 عند النقر على player3 =====
-  closeBtn.addEventListener('click', () => {
-    document.body.classList.remove('xoox');
-  });
+  // ===== فتح / إغلاق وضع MP3 =====
+  playerOpenBtn.addEventListener('click', () => document.body.classList.add('xoox'));
+  closeBtn.addEventListener('click',      () => document.body.classList.remove('xoox'));
 
-  // ===== شريط التقدم (يعمل باللمس والنقر) =====
-  let isDragging = false;
-
+  // ===== شريط التقدم =====
   function setProgressFromEvent(e) {
-    const rect = progressBar.getBoundingClientRect();
+    const rect   = progressBar.getBoundingClientRect();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     let ratio = (clientX - rect.left) / rect.width;
     ratio = Math.max(0, Math.min(1, ratio));
     progressFill.style.width = (ratio * 100) + '%';
-    // إرسال أمر seek لليوتيوب
     try {
-      const duration = ytDuration || 0;
-      if (duration > 0) {
-        const seekTo = Math.floor(ratio * duration);
+      if (ytDuration > 0) {
         player.contentWindow.postMessage(
-          JSON.stringify({ event: 'command', func: 'seekTo', args: [seekTo, true] }), '*'
+          JSON.stringify({ event: 'command', func: 'seekTo', args: [Math.floor(ratio * ytDuration), true] }), '*'
         );
       }
     } catch (_) {}
   }
+  progressBar.addEventListener('mousedown', e => { isDragging = true; setProgressFromEvent(e); e.preventDefault(); });
+  document.addEventListener('mousemove',   e => { if (isDragging) setProgressFromEvent(e); });
+  document.addEventListener('mouseup',     ()  => { isDragging = false; });
+  progressBar.addEventListener('touchstart', e => { isDragging = true; setProgressFromEvent(e); }, { passive: true });
+  document.addEventListener('touchmove',    e => { if (isDragging) setProgressFromEvent(e); },    { passive: true });
+  document.addEventListener('touchend',     ()  => { isDragging = false; });
 
-  // Mouse events
-  progressBar.addEventListener('mousedown', (e) => {
-    isDragging = true;
-    setProgressFromEvent(e);
-    e.preventDefault();
-  });
-  document.addEventListener('mousemove', (e) => {
-    if (isDragging) setProgressFromEvent(e);
-  });
-  document.addEventListener('mouseup', () => { isDragging = false; });
-
-  // Touch events
-  progressBar.addEventListener('touchstart', (e) => {
-    isDragging = true;
-    setProgressFromEvent(e);
-  }, { passive: true });
-  document.addEventListener('touchmove', (e) => {
-    if (isDragging) setProgressFromEvent(e);
-  }, { passive: true });
-  document.addEventListener('touchend', () => { isDragging = false; });
-
-  // ===== زر التشغيل/إيقاف =====
-  let mp3Playing = false;
+  // ===== زر التشغيل / إيقاف =====
   playPauseBtn.addEventListener('click', () => {
+    if (!videoReady) return; // لا تستجب قبل جهوزية الفيديو
     try {
       if (mp3Playing) {
-        player.contentWindow.postMessage(
-          JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*'
-        );
-        playPauseBtn.innerHTML = '<ion-icon name="play-outline"></ion-icon>';
-        mp3Playing = false;
+        player.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'pauseVideo', args: [] }), '*');
       } else {
-        player.contentWindow.postMessage(
-          JSON.stringify({ event: 'command', func: 'playVideo', args: [] }), '*'
-        );
-        playPauseBtn.innerHTML = '<ion-icon name="pause-outline"></ion-icon>';
-        mp3Playing = true;
+        player.contentWindow.postMessage(JSON.stringify({ event: 'command', func: 'playVideo',  args: [] }), '*');
       }
     } catch (_) {}
   });
 
-  // ===== Wake Lock: منع إغلاق الشاشة =====
-  let wakeLock = null;
-
-  async function requestWakeLock() {
-    if (!('wakeLock' in navigator)) return;
-    try {
-      wakeLock = await navigator.wakeLock.request('screen');
-    } catch (_) {}
-  }
-
-  async function releaseWakeLock() {
-    if (!wakeLock) return;
-    try {
-      await wakeLock.release();
-      wakeLock = null;
-    } catch (_) {}
-  }
-
-  document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'visible' && isPlaying) {
-      await requestWakeLock();
-    }
-  });
-
-  // ===== حالة الانتقال التلقائي =====
+  // ===== انتقال التلقائي =====
   let autoNext = localStorage.getItem('autoNext') === 'true';
-  let isPlaying = false;
-  let ytDuration = 0;
-  let ytCurrentTime = 0;
-
-  function applyAutoNextStyle() {
-    autoNextBtn.classList.toggle('active', autoNext);
-  }
-
+  function applyAutoNextStyle() { autoNextBtn.classList.toggle('active', autoNext); }
   autoNextBtn.addEventListener('click', () => {
     autoNext = !autoNext;
     localStorage.setItem('autoNext', autoNext);
     applyAutoNextStyle();
   });
-
   applyAutoNextStyle();
 
-  backBtn.href = `section.html?cat=${encodeURIComponent(cat)}`;
-  catEl.textContent   = cat;
-  idBadge.textContent = videoId || '—';
+  // ===== تحميل فيديو جديد بدون إعادة تحميل الصفحة =====
+  function loadVideo(vid, cat) {
+    if (vid === currentVideoId) return;
 
-  // ===== قائمة الفيديوهات =====
-  const catVideos  = DATA[cat] || [];
-  const currentIdx = catVideos.findIndex(v => v.id === videoId);
-  const nextVideo  = catVideos[currentIdx + 1] || null;
+    currentVideoId = vid;
+    currentCat     = cat;
 
-  if (!videoId) {
-    titleEl.textContent = 'فيديو غير موجود';
-  } else {
-    player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`;
+    // إعادة ضبط الحالة
+    videoReady    = false;
+    ytDuration    = 0;
+    ytCurrentTime = 0;
+    isPlaying     = false;
+    mp3Playing    = false;
+    progressFill.style.width = '0%';
+    showSpinner();
+    document.body.classList.remove('xoox');
 
-    // ===== رصد حالة الفيديو =====
-    window.addEventListener('message', async (e) => {
-      try {
-        const data = JSON.parse(e.data);
-        if (data.event === 'infoDelivery' && data.info) {
-          const info = data.info;
+    // تحديث URL بدون reload
+    const newUrl = `watch.html?id=${encodeURIComponent(vid)}&cat=${encodeURIComponent(cat)}`;
+    history.pushState({ vid, cat }, '', newUrl);
 
-          // تحديث مدة الفيديو
-          if (info.duration !== undefined && info.duration > 0) {
-            ytDuration = info.duration;
-          }
+    // تحديث الواجهة
+    catEl.textContent   = cat;
+    idBadge.textContent = vid;
+    backBtn.href        = `section.html?cat=${encodeURIComponent(cat)}`;
+    titleEl.textContent = '...';
 
-          // تحديث الوقت الحالي وشريط التقدم
-          if (info.currentTime !== undefined && ytDuration > 0 && !isDragging) {
-            ytCurrentTime = info.currentTime;
-            const ratio = ytCurrentTime / ytDuration;
-            progressFill.style.width = (ratio * 100) + '%';
-          }
+    // تحميل الـ iframe
+    player.src = `https://www.youtube.com/embed/${vid}?autoplay=1&rel=0&enablejsapi=1`;
 
-          if (info.playerState !== undefined) {
-            const state = info.playerState;
+    // polling
+    clearInterval(pollInterval);
+    pollInterval = null;
+    player.onload = startPolling;
 
-            if (state === 1) {
-              isPlaying = true;
-              mp3Playing = true;
-              playPauseBtn.innerHTML = '<ion-icon name="pause-outline"></ion-icon>';
-              await requestWakeLock();
-            }
-            if (state === 2 || state === -1) {
-              isPlaying = false;
-              mp3Playing = false;
-              playPauseBtn.innerHTML = '<ion-icon name="play-outline"></ion-icon>';
-              await releaseWakeLock();
-            }
-            if (state === 0) {
-              isPlaying = false;
-              mp3Playing = false;
-              playPauseBtn.innerHTML = '<ion-icon name="play-outline"></ion-icon>';
-              await releaseWakeLock();
-              if (autoNext && nextVideo) {
-                window.location.href = `watch.html?id=${nextVideo.id}&cat=${encodeURIComponent(nextVideo.category)}`;
-              }
-            }
-          }
-        }
-      } catch (_) {}
-    });
-
-    player.addEventListener('load', () => {
-      setInterval(() => {
-        try {
-          player.contentWindow.postMessage('{"event":"listening"}', '*');
-          player.contentWindow.postMessage(
-            JSON.stringify({ event: 'command', func: 'getPlayerState', args: [] }), '*'
-          );
-        } catch (_) {}
-      }, 1000);
-    });
-
-    // ===== جلب عنوان الفيديو الحالي =====
-    fetchVideoTitle(videoId).then(title => {
+    // عنوان + سجل
+    const catVideos = DATA[cat] || [];
+    fetchVideoTitle(vid).then(title => {
       titleEl.textContent = title;
-      const current = catVideos.find(v => v.id === videoId) || { id: videoId, category: cat };
+      const current = catVideos.find(v => v.id === vid) || { id: vid, category: cat };
       addToWatchHistory({ ...current, title });
     });
 
-    // ===== بناء قائمة المقترحات =====
-    const prevVideo  = currentIdx > 0 ? catVideos[currentIdx - 1] : null;
+    // مقترحات
+    buildSuggestions(vid, cat, catVideos);
+  }
+
+  function startPolling() {
+    if (pollInterval) clearInterval(pollInterval);
+    pollInterval = setInterval(() => {
+      try {
+        player.contentWindow.postMessage('{"event":"listening"}', '*');
+        player.contentWindow.postMessage(
+          JSON.stringify({ event: 'command', func: 'getPlayerState', args: [] }), '*'
+        );
+      } catch (_) {}
+    }, 1000);
+  }
+
+  // ===== رصد رسائل YouTube =====
+  window.addEventListener('message', async e => {
+    try {
+      const data = JSON.parse(e.data);
+      if (data.event === 'infoDelivery' && data.info) {
+        const info = data.info;
+
+        if (info.duration !== undefined && info.duration > 0) ytDuration = info.duration;
+
+        if (info.currentTime !== undefined && ytDuration > 0 && !isDragging) {
+          ytCurrentTime = info.currentTime;
+          progressFill.style.width = ((ytCurrentTime / ytDuration) * 100) + '%';
+        }
+
+        if (info.playerState !== undefined) {
+          const state = info.playerState;
+
+          // -1 = غير محمّل, 3 = يحمّل/buffering
+          if (state === 3 || state === -1) {
+            showSpinner();
+          }
+
+          if (state === 1) { // يعمل
+            videoReady = true;
+            isPlaying  = true;
+            mp3Playing = true;
+            showPauseIcon();
+            await requestWakeLock();
+          }
+
+          if (state === 2) { // موقوف
+            videoReady = true;
+            isPlaying  = false;
+            mp3Playing = false;
+            showPlayIcon();
+            await releaseWakeLock();
+          }
+
+          if (state === 0) { // انتهى
+            videoReady = true;
+            isPlaying  = false;
+            mp3Playing = false;
+            showPlayIcon();
+            await releaseWakeLock();
+
+            if (autoNext) {
+              const catVideos  = DATA[currentCat] || [];
+              const currentIdx = catVideos.findIndex(v => v.id === currentVideoId);
+              const nextVideo  = catVideos[currentIdx + 1] || null;
+              if (nextVideo) loadVideo(nextVideo.id, nextVideo.category);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+  });
+
+  // ===== بناء المقترحات =====
+  function buildSuggestions(vid, cat, catVideos) {
+    const currentIdx   = catVideos.findIndex(v => v.id === vid);
+    const prevVideo    = currentIdx > 0 ? catVideos[currentIdx - 1] : null;
     const afterCurrent = catVideos.slice(currentIdx + 1, currentIdx + 9);
 
     const rawPool = [
       ...(prevVideo ? [prevVideo] : []),
       catVideos[currentIdx],
       ...afterCurrent
-    ].slice(0, 10);
+    ].filter(Boolean).slice(0, 10);
 
     function renderSugg(list) {
       if (!list.length) {
@@ -729,19 +735,30 @@ const params  = new URLSearchParams(location.search);
         return;
       }
       suggList.innerHTML = list.map((v, i) => {
-        const isCurrent = v.id === videoId;
+        const isCurrent = v.id === vid;
         return `
         <a class="sugg-card${isCurrent ? ' coco2' : ''}"
            href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
-           style="animation-delay:${i * 50}ms"
-           onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')})">
-          <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
+           data-vid="${v.id}" data-cat="${encodeURIComponent(v.category)}"
+           style="animation-delay:${i * 50}ms">
+          <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title || ''}" loading="lazy" />
           <div class="sugg-info">
-            <div class="sugg-title" id="st-${v.id}">${v.title}</div>
+            <div class="sugg-title" id="st-${v.id}">${v.title || ''}</div>
             <span class="sugg-cat">${v.category}</span>
           </div>
         </a>`;
       }).join('');
+
+      // ربط الأحداث بدون إعادة تحميل
+      suggList.querySelectorAll('.sugg-card').forEach(card => {
+        card.addEventListener('click', e => {
+          e.preventDefault();
+          const cVid = card.dataset.vid;
+          const cCat = decodeURIComponent(card.dataset.cat);
+          addToWatchHistory({ id: cVid, category: cCat, title: card.querySelector('.sugg-title')?.textContent || '' });
+          loadVideo(cVid, cCat);
+        });
+      });
     }
 
     renderSugg(rawPool);
@@ -753,8 +770,49 @@ const params  = new URLSearchParams(location.search);
       });
     });
   }
-</script>
 
+  // ===== التهيئة الأولى =====
+  (function init() {
+    const params  = new URLSearchParams(location.search);
+    const videoId = params.get('id');
+    const cat     = params.get('cat') || 'شائعة';
+
+    backBtn.href = `section.html?cat=${encodeURIComponent(cat)}`;
+
+    if (!videoId) {
+      titleEl.textContent = 'فيديو غير موجود';
+      return;
+    }
+
+    // spinner فوري
+    showSpinner();
+
+    currentVideoId = videoId;
+    currentCat     = cat;
+    catEl.textContent   = cat;
+    idBadge.textContent = videoId;
+
+    player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`;
+    player.onload = startPolling;
+
+    const catVideos = DATA[cat] || [];
+    fetchVideoTitle(videoId).then(title => {
+      titleEl.textContent = title;
+      const current = catVideos.find(v => v.id === videoId) || { id: videoId, category: cat };
+      addToWatchHistory({ ...current, title });
+    });
+
+    buildSuggestions(videoId, cat, catVideos);
+  })();
+
+  // ===== دعم زر الرجوع في المتصفح =====
+  window.addEventListener('popstate', e => {
+    if (e.state && e.state.vid) {
+      currentVideoId = null; // force reload
+      loadVideo(e.state.vid, e.state.cat);
+    }
+  });
+</script>
 
 </body>
 </html>
