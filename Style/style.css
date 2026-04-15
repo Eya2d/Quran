@@ -30,6 +30,10 @@ header {
     height: 30px; /*64*/
 }
 
+.direction {
+    direction: rtl;
+}
+
 .decoment {
     padding-top: 30px !important;
     display: block;
