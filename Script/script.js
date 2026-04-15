@@ -9,6 +9,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   let activeFilter = 'الكل';
 
+  // ===== دالة التخليط العشوائي =====
+  function shuffleArray(arr) {
+    const shuffled = [...arr];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  }
+
   // Function to update placeholder based on active filter
   function updatePlaceholder() {
     if (activeFilter === 'الكل') {
@@ -27,9 +37,37 @@ document.addEventListener("DOMContentLoaded", () => {
     filterDiv.appendChild(div);
   });
 
-  // ===== نسخ البيانات محليًا =====
-  let localData = { الكل: [...DATA.الكل] };
-  CATEGORIES.forEach(cat => { localData[cat] = [...(DATA[cat] || [])]; });
+  // ===== localData — يُحمَّل lazy عند أول بحث =====
+  let localData = null;
+  let dataReady = false;
+  let enrichDone = false;
+
+  async function ensureData() {
+    if (dataReady) return;
+    // تحميل DATA_RAW وبناء localData
+    const all = await getCategoryData('الكل');
+    localData = { الكل: [...all] };
+    CATEGORIES.forEach(cat => {
+      localData[cat] = all.filter(v => v.category === cat);
+    });
+    dataReady = true;
+
+    // جلب العناوين الحقيقية في الخلفية (مرة واحدة فقط)
+    if (!enrichDone) {
+      enrichDone = true;
+      enrichVideos(localData.الكل).then(enriched => {
+        localData.الكل = enriched;
+        enriched.forEach(v => {
+          CATEGORIES.forEach(cat => {
+            if (!localData[cat]) return;
+            const idx = localData[cat].findIndex(d => d.id === v.id);
+            if (idx !== -1) localData[cat][idx].title = v.title;
+          });
+        });
+        if (searchInput.value.trim()) doSearch(searchInput.value);
+      });
+    }
+  }
 
   // ===== RENDER HISTORY =====
   function renderHistory() {
@@ -76,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // ===== SEARCH =====
-  function doSearch(q) {
+  async function doSearch(q) {
     q = q.trim();
     if (!q) {
       resultsDiv.classList.remove('active');
@@ -91,10 +129,22 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // تحميل البيانات إن لم تكن جاهزة بعد
+    if (!dataReady) {
+      resultsGrid.innerHTML = '<p class="no-results" style="opacity:.5">جاري التحميل...</p>';
+      await ensureData();
+      // إن تغير النص أثناء التحميل، استخدم الحالي
+      if (searchInput.value.trim() !== q) return;
+    }
+
     const pool = activeFilter === 'الكل' ? localData.الكل : (localData[activeFilter] || []);
-    const results = pool.filter(v =>
+
+    const matched = pool.filter(v =>
       v.title.includes(q) || v.category.includes(q)
-    ).slice(0, 10);
+    );
+
+    // ===== تخليط النتائج عشوائياً في كل بحث =====
+    const results = shuffleArray(matched).slice(0, 10);
 
     if (!results.length) {
       resultsGrid.innerHTML = '<p class="no-results">لا توجد نتائج مطابقة</p>';
@@ -135,21 +185,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ===== INIT =====
   renderHistory();
-  
-  // Set initial placeholder
   updatePlaceholder();
-
-  enrichVideos(DATA.الكل).then(enriched => {
-    localData.الكل = enriched;
-    enriched.forEach(v => {
-      CATEGORIES.forEach(cat => {
-        if (!localData[cat]) return;
-        const idx = localData[cat].findIndex(d => d.id === v.id);
-        if (idx !== -1) localData[cat][idx].title = v.title;
-      });
-    });
-    if (searchInput.value.trim()) doSearch(searchInput.value);
-  });
+  // لا يوجد تحميل للبيانات هنا — يحدث فقط عند أول بحث
 });
 
 
@@ -164,22 +201,18 @@ let dragDirection = null;
 let isTouchDevice = false;
 let hasMoved = false;
 let isDragging = false;
-let blockNextClick = false; // ✅ جديد
+let blockNextClick = false;
 
-// بداية السحب
 container.addEventListener('touchstart', startDrag);
 container.addEventListener('mousedown', startDrag);
 
-// أثناء السحب
 window.addEventListener('touchmove', moveDrag);
 window.addEventListener('mousemove', moveDrag);
 
-// نهاية السحب
 window.addEventListener('touchend', endDrag);
 window.addEventListener('mouseup', endDrag);
 window.addEventListener('mouseleave', endDrag);
 
-// ✅ منع فتح الرابط بعد السحب (نقرة واحدة فقط)
 document.addEventListener('click', function (e) {
   const link = e.target.closest('a, .cooo.x-btn');
   if (!link) return;
@@ -187,7 +220,7 @@ document.addEventListener('click', function (e) {
   if (blockNextClick) {
     e.preventDefault();
     e.stopPropagation();
-    blockNextClick = false; // يسمح بالنقرات التالية
+    blockNextClick = false;
   }
 }, true);
 
@@ -253,7 +286,6 @@ function endDrag(e) {
   container.style.cursor = 'grab';
   document.body.style.userSelect = '';
 
-  // ✅ إذا حصل سحب فعلي → امنع أول نقرة
   if (hasMoved || isDragging) {
     blockNextClick = true;
   }
@@ -362,7 +394,6 @@ container.addEventListener('scroll', () => {
 
 // =========================
 
-// منع سحب الصور
 container.addEventListener('dragstart', (e) => {
   if (isDown || hasMoved || isDragging) {
     e.preventDefault();
@@ -372,7 +403,6 @@ container.addEventListener('dragstart', (e) => {
 
 container.style.cursor = 'grab';
 
-// منع كليك يمين أثناء السحب
 container.addEventListener('contextmenu', (e) => {
   if (isDown || isDragging) {
     e.preventDefault();
