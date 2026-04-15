@@ -132,6 +132,7 @@
     /* player-mp3 */
     .player-mp3 {
       position: absolute;
+      user-select: none;
       bottom: 0;
       left: 0;
       right: 0;
@@ -685,15 +686,15 @@
     player.onload = startPolling;
 
     // عنوان + سجل
-    const catVideos = DATA[cat] || [];
-    fetchVideoTitle(vid).then(title => {
-      titleEl.textContent = title;
-      const current = catVideos.find(v => v.id === vid) || { id: vid, category: cat };
-      addToWatchHistory({ ...current, title });
+    // تحميل بيانات القسم عند الحاجة
+    getCategoryData(cat).then(catVideos => {
+      fetchVideoTitle(vid).then(title => {
+        titleEl.textContent = title;
+        const current = catVideos.find(v => v.id === vid) || { id: vid, category: cat };
+        addToWatchHistory({ ...current, title });
+      });
+      buildSuggestions(vid, cat, catVideos);
     });
-
-    // مقترحات
-    buildSuggestions(vid, cat, catVideos);
   }
 
   function startPolling() {
@@ -761,10 +762,11 @@
             await releaseWakeLock();
 
             if (autoNext) {
-              const catVideos  = DATA[currentCat] || [];
-              const currentIdx = catVideos.findIndex(v => v.id === currentVideoId);
-              const nextVideo  = catVideos[currentIdx + 1] || null;
-              if (nextVideo) loadVideo(nextVideo.id, nextVideo.category);
+              getCategoryData(currentCat).then(catVideos => {
+                const currentIdx = catVideos.findIndex(v => v.id === currentVideoId);
+                const nextVideo  = catVideos[currentIdx + 1] || null;
+                if (nextVideo) loadVideo(nextVideo.id, nextVideo.category);
+              });
             }
           }
         }
@@ -827,7 +829,7 @@
   }
 
   // ===== التهيئة الأولى =====
-  (function init() {
+  (async function init() {
     const params  = new URLSearchParams(location.search);
     const videoId = params.get('id');
     const cat     = params.get('cat') || 'شائعة';
@@ -850,7 +852,8 @@
     player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`;
     player.onload = startPolling;
 
-    const catVideos = DATA[cat] || [];
+    // تحميل بيانات القسم عند الحاجة فقط
+    const catVideos = await getCategoryData(cat);
     fetchVideoTitle(videoId).then(title => {
       titleEl.textContent = title;
       const current = catVideos.find(v => v.id === videoId) || { id: videoId, category: cat };
