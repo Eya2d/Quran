@@ -131,7 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // تحميل البيانات إن لم تكن جاهزة بعد
     if (!dataReady) {
-      resultsGrid.innerHTML = '<p class="no-results" style="opacity:.5">جاري التحميل...</p>';
+      resultsGrid.innerHTML = '<p class="no-results direction" style="opacity:.5">جاري التحميل...</p>';
       await ensureData();
       // إن تغير النص أثناء التحميل، استخدم الحالي
       if (searchInput.value.trim() !== q) return;
