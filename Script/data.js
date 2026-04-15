@@ -22,28 +22,87 @@ const CATEGORIES = [
   "عبد الله بصفر"
 ];
 
-// ===== LAZY LOAD DATA_RAW =====
-// DATA_RAW لا يُحمَّل إلا عند الحاجة الفعلية (بحث أو فتح قسم)
-let _rawLoaded = false;
-let _rawLoadingPromise = null;
+// ===== FETCH & PARSE — قسم واحد فقط من النص =====
+// يجلب data-raw.js كنص خام ويستخرج القسم المطلوب بدون تنفيذ JS
+let _rawText = null;
+let _rawFetchPromise = null;
 
-function _loadRaw() {
-  if (_rawLoaded) return Promise.resolve();
-  if (_rawLoadingPromise) return _rawLoadingPromise;
-
-  _rawLoadingPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'Script/data-raw.js';
-    script.onload = () => {
-      _rawLoaded = true;
-      resolve();
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-
-  return _rawLoadingPromise;
+function _fetchRawText() {
+  if (_rawText) return Promise.resolve(_rawText);
+  if (_rawFetchPromise) return _rawFetchPromise;
+  _rawFetchPromise = fetch('Script/data-raw.js')
+    .then(r => r.text())
+    .then(t => { _rawText = t; return t; });
+  return _rawFetchPromise;
 }
+
+function _extractCatFromText(text, cat) {
+  // تحديد بداية القسم
+  const startKey = `"${cat}": [`;
+  const startIdx = text.indexOf(startKey);
+  if (startIdx === -1) return [];
+
+  // تتبع الأقواس لإيجاد نهاية المصفوفة
+  const arrStart = text.indexOf('[', startIdx);
+  let depth = 0, i = arrStart;
+  while (i < text.length) {
+    if (text[i] === '[') depth++;
+    else if (text[i] === ']') { depth--; if (depth === 0) { i++; break; } }
+    i++;
+  }
+
+  // استخراج IDs بـ regex بسيط
+  const arrText = text.slice(arrStart, i);
+  const cache = getTitleCache();
+  const ids = [];
+  const idRegex = /\{\s*id:\s*"([^"]+)"/g;
+  let m;
+  while ((m = idRegex.exec(arrText)) !== null) {
+    const cleanId = m[1].split('&')[0].split('?')[0].trim();
+    if (cleanId) ids.push({
+      id: cleanId,
+      category: cat,
+      title: cache[cleanId] || "جاري التحميل..."
+    });
+  }
+  return ids;
+}
+
+// ===== getCategoryData — الدالة الرئيسية =====
+// تجلب النص مرة واحدة فقط، ثم تستخرج القسم المطلوب من الذاكرة
+const _dataCache = {};
+
+async function getCategoryData(cat) {
+  if (_dataCache[cat]) return _dataCache[cat];
+
+  const text = await _fetchRawText();
+
+  if (cat === 'الكل') {
+    const all = CATEGORIES.flatMap(c => _extractCatFromText(text, c));
+    _dataCache['الكل'] = all;
+    return all;
+  }
+
+  const result = _extractCatFromText(text, cat);
+  _dataCache[cat] = result;
+  return result;
+}
+
+// ===== DATA Proxy — للتوافق مع الكود القديم =====
+// يعمل فقط بعد getCategoryData (أي بعد التحميل)
+const DATA = new Proxy({}, {
+  get(_, prop) {
+    if (_dataCache[prop] !== undefined) return _dataCache[prop];
+    return undefined;
+  },
+  set(_, prop, value) {
+    _dataCache[prop] = value;
+    return true;
+  },
+  has(_, prop) {
+    return prop === 'الكل' || CATEGORIES.includes(prop);
+  }
+});
 
 // ===== CLEAN VIDEO ID =====
 function cleanVideoId(id) {
@@ -66,7 +125,7 @@ function saveTitleCache(cache) {
 // ===== FETCH TITLE =====
 async function fetchVideoTitle(id) {
   const cleanId = cleanVideoId(id);
-  if (!cleanId) { console.warn("ID فاضي تم تجاهله"); return null; }
+  if (!cleanId) return null;
 
   const cache = getTitleCache();
   if (cache[cleanId]) return cache[cleanId];
@@ -90,10 +149,7 @@ async function fetchVideoTitle(id) {
 // ===== ENRICH VIDEOS =====
 async function enrichVideos(videos) {
   const cache = getTitleCache();
-  const validVideos = videos.filter(v => {
-    if (!cleanVideoId(v.id)) { console.warn("فيديو بدون ID:", v); return false; }
-    return true;
-  });
+  const validVideos = videos.filter(v => cleanVideoId(v.id));
   const missing = validVideos.filter(v => !cache[cleanVideoId(v.id)]);
   const BATCH = 6;
   for (let i = 0; i < missing.length; i += BATCH) {
@@ -105,46 +161,6 @@ async function enrichVideos(videos) {
     id: cleanVideoId(v.id),
     title: updated[cleanVideoId(v.id)] || v.title || cleanVideoId(v.id)
   }));
-}
-
-// ===== DATA — Lazy Proxy =====
-const _dataCache = {};
-
-function _buildCat(cat) {
-  if (_dataCache[cat]) return _dataCache[cat];
-  const raw = cat === 'الكل'
-    ? CATEGORIES.flatMap(c => DATA_RAW[c] || [])
-    : (DATA_RAW[cat] || []);
-  const cache = getTitleCache();
-  _dataCache[cat] = raw
-    .filter(v => cleanVideoId(v.id) !== "")
-    .map(v => ({
-      ...v,
-      id: cleanVideoId(v.id),
-      title: cache[cleanVideoId(v.id)] || "جاري التحميل..."
-    }));
-  return _dataCache[cat];
-}
-
-const DATA = new Proxy({}, {
-  get(_, prop) {
-    if (prop in _dataCache) return _dataCache[prop];
-    if ((prop === 'الكل' || CATEGORIES.includes(prop)) && _rawLoaded) return _buildCat(prop);
-    return undefined;
-  },
-  set(_, prop, value) {
-    _dataCache[prop] = value;
-    return true;
-  },
-  has(_, prop) {
-    return prop === 'الكل' || CATEGORIES.includes(prop);
-  }
-});
-
-// ===== getCategoryData — يحمّل DATA_RAW عند الحاجة =====
-async function getCategoryData(cat) {
-  await _loadRaw();
-  return _buildCat(cat);
 }
 
 // ===== WATCH HISTORY =====
