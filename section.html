@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet" />
 
+  <script src="Script/data.js"></script>
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <style>
     :root {
@@ -255,7 +256,6 @@
 <!--
   ✅ data.js فقط — data-raw.js يُحمَّل تلقائياً عند فتح صفحة القسم
 -->
-<script src="Script/data.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const cat    = params.get('cat') || 'شائعة';
