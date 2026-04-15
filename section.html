@@ -252,12 +252,15 @@
 </main>
 
 <script src="Script/app.js"></script>
+<!--
+  ✅ data.js فقط — data-raw.js يُحمَّل تلقائياً عند فتح صفحة القسم
+-->
 <script src="Script/data.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const cat    = params.get('cat') || 'شائعة';
-  let videos   = DATA[cat] || [];
-  let filtered = [...videos];
+  let videos   = [];
+  let filtered = [];
  
   const titleLink     = document.getElementById('section-title-link');
   const countEl       = document.getElementById('section-count');
@@ -266,6 +269,9 @@
  
   titleLink.textContent = cat;
   titleLink.href = '#';
+
+  // مؤشر تحميل أولي
+  grid.innerHTML = '<p class="no-results" style="opacity:.5">جاري تحميل الفيديوهات...</p>';
  
   // ===== رسم الشبكة =====
   function renderGrid(list) {
@@ -285,15 +291,13 @@
     `).join('');
   }
  
-  // ===== تحديث عناوين الكروت بعد الجلب =====
+  // ===== تحديث عناوين الكروت =====
   function updateTitlesInGrid(enriched) {
     enriched.forEach(v => {
       const el = document.getElementById('title-' + v.id);
       if (el) { el.textContent = v.title; el.classList.remove('loading'); }
     });
-    // تحديث مصفوفة البيانات
     videos = enriched;
-    // إذا كان هناك بحث نشط أعد الفلترة
     const q = sectionSearch.value.trim();
     if (q) {
       filtered = videos.filter(v => v.title.includes(q));
@@ -308,19 +312,22 @@
     renderGrid(filtered);
   });
  
-  // ===== التشغيل =====
-  renderGrid(videos);
- 
-  // جلب العناوين الحقيقية من YouTube ثم تحديث الواجهة
-  enrichVideos(videos).then(enriched => {
-    // تحديث DATA العام أيضاً
-    if (DATA[cat]) {
-      enriched.forEach(v => {
-        const idx = DATA[cat].findIndex(d => d.id === v.id);
-        if (idx !== -1) DATA[cat][idx].title = v.title;
-      });
-    }
-    updateTitlesInGrid(enriched);
+  // ===== تحميل البيانات عند فتح الصفحة (مرة واحدة فقط) =====
+  getCategoryData(cat).then(data => {
+    videos = data;
+    filtered = [...videos];
+    renderGrid(videos);
+
+    // جلب العناوين الحقيقية
+    enrichVideos(videos).then(enriched => {
+      if (DATA[cat]) {
+        enriched.forEach(v => {
+          const idx = DATA[cat].findIndex(d => d.id === v.id);
+          if (idx !== -1) DATA[cat][idx].title = v.title;
+        });
+      }
+      updateTitlesInGrid(enriched);
+    });
   });
 </script>
 </body>
