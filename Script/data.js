@@ -22,74 +22,79 @@ const CATEGORIES = [
   "عبد الله بصفر"
 ];
 
-// ===== FETCH & PARSE — قسم واحد فقط من النص =====
-// يجلب data-raw.js كنص خام ويستخرج القسم المطلوب بدون تنفيذ JS
-let _rawText = null;
-let _rawFetchPromise = null;
+// ===== LAZY LOAD DATA_RAW =====
+let _rawLoaded = false;
+let _rawLoadingPromise = null;
 
-function _fetchRawText() {
-  if (_rawText) return Promise.resolve(_rawText);
-  if (_rawFetchPromise) return _rawFetchPromise;
-  _rawFetchPromise = fetch('Script/data-raw.js')
-    .then(r => r.text())
-    .then(t => { _rawText = t; return t; });
-  return _rawFetchPromise;
+function _loadRaw() {
+  if (_rawLoaded) return Promise.resolve();
+  if (_rawLoadingPromise) return _rawLoadingPromise;
+
+  _rawLoadingPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'Script/data-raw.js';
+    script.onload = () => {
+      _rawLoaded = true;
+      resolve();
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
+  });
+
+  return _rawLoadingPromise;
 }
 
-function _extractCatFromText(text, cat) {
-  // تحديد بداية القسم
-  const startKey = `"${cat}": [`;
-  const startIdx = text.indexOf(startKey);
-  if (startIdx === -1) return [];
-
-  // تتبع الأقواس لإيجاد نهاية المصفوفة
-  const arrStart = text.indexOf('[', startIdx);
-  let depth = 0, i = arrStart;
-  while (i < text.length) {
-    if (text[i] === '[') depth++;
-    else if (text[i] === ']') { depth--; if (depth === 0) { i++; break; } }
-    i++;
-  }
-
-  // استخراج IDs بـ regex بسيط
-  const arrText = text.slice(arrStart, i);
-  const cache = getTitleCache();
-  const ids = [];
-  const idRegex = /\{\s*id:\s*"([^"]+)"/g;
-  let m;
-  while ((m = idRegex.exec(arrText)) !== null) {
-    const cleanId = m[1].split('&')[0].split('?')[0].trim();
-    if (cleanId) ids.push({
-      id: cleanId,
-      category: cat,
-      title: cache[cleanId] || "جاري التحميل..."
-    });
-  }
-  return ids;
-}
-
-// ===== getCategoryData — الدالة الرئيسية =====
-// تجلب النص مرة واحدة فقط، ثم تستخرج القسم المطلوب من الذاكرة
+// ===== getCategoryData — القسم المطلوب فقط =====
 const _dataCache = {};
 
 async function getCategoryData(cat) {
   if (_dataCache[cat]) return _dataCache[cat];
 
-  const text = await _fetchRawText();
+  // تحميل data-raw.js إن لم يكن محملاً
+  await _loadRaw();
+
+  // استخراج القسم المطلوب فقط من DATA_RAW
+  const cache = getTitleCache();
 
   if (cat === 'الكل') {
-    const all = CATEGORIES.flatMap(c => _extractCatFromText(text, c));
+    const all = CATEGORIES.flatMap(c =>
+      (DATA_RAW[c] || [])
+        .map(v => {
+          const id = cleanVideoId(v.id);
+          return id ? { id, category: c, title: cache[id] || "جاري التحميل..." } : null;
+        })
+        .filter(Boolean)
+    );
     _dataCache['الكل'] = all;
+
+    // تحرير DATA_RAW من الذاكرة بعد البناء
+    _freeRaw();
     return all;
   }
 
-  const result = _extractCatFromText(text, cat);
+  const raw = DATA_RAW[cat] || [];
+  const result = raw
+    .map(v => {
+      const id = cleanVideoId(v.id);
+      return id ? { id, category: cat, title: cache[id] || "جاري التحميل..." } : null;
+    })
+    .filter(Boolean);
+
   _dataCache[cat] = result;
+
+  // تحرير DATA_RAW من الذاكرة بعد استخراج القسم
+  _freeRaw();
   return result;
 }
 
+// إزالة DATA_RAW من الذاكرة بعد الاستخراج
+function _freeRaw() {
+  if (typeof DATA_RAW !== 'undefined') {
+    try { window.DATA_RAW = null; } catch(_) {}
+  }
+}
+
 // ===== DATA Proxy — للتوافق مع الكود القديم =====
-// يعمل فقط بعد getCategoryData (أي بعد التحميل)
 const DATA = new Proxy({}, {
   get(_, prop) {
     if (_dataCache[prop] !== undefined) return _dataCache[prop];
