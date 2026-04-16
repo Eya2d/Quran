@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", () => {
       transform: translateY(0);
       pointer-events: auto;
       border: solid 1px #177ccb33;
-      background-color: #dae6ed !important;
+      background-color: #ffffff !important;
       color: rgb(21, 137, 245);
     }
   `;
