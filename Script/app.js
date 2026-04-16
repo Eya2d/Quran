@@ -68,7 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
       height: 48px;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 18px;
+      font-size: 24px;
       box-shadow: 0 5px 15px rgb(9 18 46 / 20%);
       opacity: 0;
       transform: translateY(20px);
