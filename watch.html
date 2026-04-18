@@ -75,6 +75,7 @@
       border-radius: 30px;
       transition: all .2s;
       direction: ltr;
+      cursor: pointer;
     }
     .nav-btn:hover {
       color: var(--text);
@@ -383,6 +384,7 @@
       overflow: hidden;
       transition: border-color .2s, transform .15s;
       animation: fadeUp .3s ease both;
+      cursor: pointer;
     }
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(10px); }
@@ -467,8 +469,9 @@
 <header>
   <a class="logo" href="index.html"><span>نـ</span>ور القرآن</a>
   <div class="nav-links">
-    <a class="nav-btn" id="back-section" href="section.html?cat=%D8%A8%D8%B4%D8%B1%D8%A9">← القسم</a>
-    <a class="nav-btn" href="index.html" style="background:#177ccb;color:#fff;border-color:#0000;">الرئيسية</a>
+    <!-- استبدال <a href> بـ <div onclick> -->
+    <div class="nav-btn" id="back-section" onclick="window.location.href=this.dataset.href" data-href="section.html?cat=%D8%A8%D8%B4%D8%B1%D8%A9">← القسم</div>
+    <div class="nav-btn" onclick="window.location.href='index.html'" style="background:#177ccb;color:#fff;border-color:#0000;">الرئيسية</div>
   </div>
 </header>
 
@@ -553,8 +556,6 @@
   const timeRemaining  = document.getElementById('time-remaining');
 
   // ===== تنسيق الوقت =====
-  // يُظهر MM:SS فقط إذا كان الوقت أقل من ساعة
-  // يُظهر H:MM:SS إذا كان ساعة أو أكثر
   function formatTime(seconds) {
     if (isNaN(seconds) || seconds < 0) seconds = 0;
     const totalSec = Math.floor(seconds);
@@ -639,7 +640,7 @@
     } catch (_) {}
   });
 
-  // ===== انتقال التلقائي =====
+  // ===== الانتقال التلقائي =====
   let autoNext = localStorage.getItem('autoNext') === 'true';
   function applyAutoNextStyle() { autoNextBtn.classList.toggle('active', autoNext); }
   autoNextBtn.addEventListener('click', () => {
@@ -674,7 +675,8 @@
     // تحديث الواجهة
     catEl.textContent   = cat;
     idBadge.textContent = vid;
-    backBtn.href        = `section.html?cat=${encodeURIComponent(cat)}`;
+    // تحديث data-href بدلاً من href
+    backBtn.dataset.href = `section.html?cat=${encodeURIComponent(cat)}`;
     titleEl.textContent = '...';
 
     // تحميل الـ iframe
@@ -686,7 +688,6 @@
     player.onload = startPolling;
 
     // عنوان + سجل
-    // تحميل بيانات القسم عند الحاجة
     getCategoryData(cat).then(catVideos => {
       fetchVideoTitle(vid).then(title => {
         titleEl.textContent = title;
@@ -730,12 +731,11 @@
         if (info.playerState !== undefined) {
           const state = info.playerState;
 
-          // -1 = غير محمّل, 3 = يحمّل/buffering
           if (state === 3 || state === -1) {
             showSpinner();
           }
 
-          if (state === 1) { // يعمل
+          if (state === 1) {
             videoReady = true;
             isPlaying  = true;
             mp3Playing = true;
@@ -743,7 +743,7 @@
             await requestWakeLock();
           }
 
-          if (state === 2) { // موقوف
+          if (state === 2) {
             videoReady = true;
             isPlaying  = false;
             mp3Playing = false;
@@ -751,7 +751,7 @@
             await releaseWakeLock();
           }
 
-          if (state === 0) { // انتهى
+          if (state === 0) {
             videoReady    = true;
             isPlaying     = false;
             mp3Playing    = false;
@@ -775,6 +775,7 @@
   });
 
   // ===== بناء المقترحات =====
+  // استبدال <a href> بـ <div onclick> في المقترحات
   function buildSuggestions(vid, cat, catVideos) {
     const currentIdx   = catVideos.findIndex(v => v.id === vid);
     const prevVideo    = currentIdx > 0 ? catVideos[currentIdx - 1] : null;
@@ -794,8 +795,7 @@
       suggList.innerHTML = list.map((v, i) => {
         const isCurrent = v.id === vid;
         return `
-        <a class="sugg-card${isCurrent ? ' coco2' : ''}"
-           href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
+        <div class="sugg-card${isCurrent ? ' coco2' : ''}"
            data-vid="${v.id}" data-cat="${encodeURIComponent(v.category)}"
            style="animation-delay:${i * 50}ms">
           <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title || ''}" loading="lazy" />
@@ -803,13 +803,12 @@
             <div class="sugg-title" id="st-${v.id}">${v.title || ''}</div>
             <span class="sugg-cat">${v.category}</span>
           </div>
-        </a>`;
+        </div>`;
       }).join('');
 
-      // ربط الأحداث بدون إعادة تحميل
+      // ربط الأحداث
       suggList.querySelectorAll('.sugg-card').forEach(card => {
-        card.addEventListener('click', e => {
-          e.preventDefault();
+        card.addEventListener('click', () => {
           const cVid = card.dataset.vid;
           const cCat = decodeURIComponent(card.dataset.cat);
           addToWatchHistory({ id: cVid, category: cCat, title: card.querySelector('.sugg-title')?.textContent || '' });
@@ -834,14 +833,14 @@
     const videoId = params.get('id');
     const cat     = params.get('cat') || 'شائعة';
 
-    backBtn.href = `section.html?cat=${encodeURIComponent(cat)}`;
+    // تحديث data-href بدلاً من href
+    backBtn.dataset.href = `section.html?cat=${encodeURIComponent(cat)}`;
 
     if (!videoId) {
       titleEl.textContent = 'فيديو غير موجود';
       return;
     }
 
-    // spinner فوري
     showSpinner();
 
     currentVideoId = videoId;
@@ -852,7 +851,6 @@
     player.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&enablejsapi=1`;
     player.onload = startPolling;
 
-    // تحميل بيانات القسم عند الحاجة فقط
     const catVideos = await getCategoryData(cat);
     fetchVideoTitle(videoId).then(title => {
       titleEl.textContent = title;
