@@ -360,6 +360,7 @@ imga img {
     box-shadow: 0px 5px 14px #dee7ff;
     width: 324px;
     max-width: -webkit-fill-available;
+    display: none;
 }
 #install-container span {
     font-size: 16px;
