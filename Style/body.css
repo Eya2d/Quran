@@ -18,6 +18,7 @@ body::after {
     font-size: 14px;
     opacity: .6;
 }
+
 .body::after {
     position: fixed;
 }
@@ -26,7 +27,7 @@ img {
     -webkit-user-drag: none;
     display: block;
 }
-button,a,input,select {
+button,a,input,select,.cooo {
     outline-color: rgb(21, 137, 245);
 }
 button {
