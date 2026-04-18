@@ -14,12 +14,10 @@
     :root {
       --bg: #0a0a0f;
     --surface: #13131a00;
-    /* --card: #1a1a24; */
     --border: #b8b8ba;
     --accent: #e63946;
     --accent2: #ff6b6b;
     --gold: #f4a261;
-    /* --text: #f0f0f5; */
     --muted: #8888aa;
     --radius: 14px;
     }
@@ -78,6 +76,7 @@
       transition: all .2s;
       margin-right: auto;
       direction: ltr;
+      cursor: pointer;
     }
     .back-btn:hover {
       color: var(--text);
@@ -111,7 +110,6 @@
       padding-bottom: 4px;
       transition: color .2s;
     }
-    /* .section-hero a:hover { color: rgba(255, 145, 0, 0.822); } */
 
     .section-count {
       margin-top: 8px;
@@ -159,6 +157,8 @@
       grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: 18px;
     }
+
+    .cards {}
 
     .vid-card {
       position: relative;
@@ -232,7 +232,8 @@
 
 <header>
   <a class="logo" href="index.html"><span>نـ</span>ور القرآن</a>
-  <a class="back-btn" href="index.html">← الرئيسية</a>
+  <!-- استبدال <a href> بـ <div onclick> -->
+  <div class="back-btn" onclick="window.location.href='index.html'">← الرئيسية</div>
 </header>
 
 <main>
@@ -268,12 +269,17 @@
   const grid          = document.getElementById('videos-grid');
  
   titleLink.textContent = cat;
-  titleLink.href = '#';
 
   // مؤشر تحميل أولي
   grid.innerHTML = '<p class="no-results" style="opacity:.5">جاري تحميل الفيديوهات...</p>';
+
+  // ===== التنقل إلى صفحة المشاهدة =====
+  function navigateToWatch(id, cat) {
+    window.location.href = `watch.html?id=${id}&cat=${cat}`;
+  }
  
   // ===== رسم الشبكة =====
+  // استبدال <a href> بـ <div onclick> في بطاقات الفيديو
   function renderGrid(list) {
     if (!list.length) {
       grid.innerHTML = '<p class="no-results">لا توجد نتائج</p>';
@@ -282,12 +288,14 @@
     }
     countEl.textContent = `${list.length} فيديو`;
     grid.innerHTML = list.map((v, i) => `
-      <a class="vid-card" href="watch.html?id=${v.id}&cat=${encodeURIComponent(v.category)}"
+    <div class="cards">
+      <div class="vid-card" id="${v.id}"
          style="animation-delay:${i * 40}ms"
-         onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')})">
+         onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')}); navigateToWatch('${v.id}', '${encodeURIComponent(v.category)}')">
         <img src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
         <div class="vid-card-title" id="title-${v.id}">${v.title}</div>
-      </a>
+      </div>
+    </div>
     `).join('');
   }
  
