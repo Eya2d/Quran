@@ -82,84 +82,63 @@
 
     <script>
     let deferredPrompt;
-        
-    function isAppInstalled() {
-      return window.matchMedia('(display-mode: standalone)').matches 
-             || window.navigator.standalone === true;
-    }
-    
-    // ✅ التحقق من إمكانية التثبيت (خصوصًا للكمبيوتر)
-    function canInstallManually() {
-      const isSecure = location.protocol === "https:";
-      const hasSW = 'serviceWorker' in navigator;
-    
-      // Chrome / Edge غالبًا يدعمون التثبيت على الكمبيوتر
-      const isDesktopChrome = /Chrome|Edg/.test(navigator.userAgent);
-    
-      return isSecure && hasSW && isDesktopChrome;
-    }
-    
-    function showInstallMessage(force = false) {
-      const installBtn = document.querySelector(".Download-app");
-      const container = document.getElementById("install-container");
-    
-      if (!installBtn || !container) return;
-    
-      // إخفاء إذا مثبت
-      if (isAppInstalled() || localStorage.getItem("appInstalled") === "true") {
-        container.style.display = "none";
-        return;
-      }
-    
-      // إظهار إذا فيه prompt أو دعم يدوي (كمبيوتر)
-      if (deferredPrompt || force || canInstallManually()) {
-        container.style.display = "block";
-      }
-    
-      installBtn.onclick = async () => {
-        // ✅ لو فيه prompt (موبايل + بعض المتصفحات)
-        if (deferredPrompt) {
-          deferredPrompt.prompt();
-          const result = await deferredPrompt.userChoice;
-        
-          if (result.outcome === 'accepted') {
-            localStorage.setItem("appInstalled", "true");
-            container.style.display = "none";
-          }
-        
-          deferredPrompt = null;
-        } 
-        // ✅ fallback للكمبيوتر
-        else {
-          alert("يمكنك تثبيت التطبيق من قائمة المتصفح (⋮) ثم 'تثبيت التطبيق'");
-        }
-      };
-    }
-    
-    // 🔥 عند توفر الحدث (موبايل غالبًا)
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      showInstallMessage();
-    });
-    
-    window.addEventListener('appinstalled', () => {
+
+function isAppInstalled() {
+  return window.matchMedia('(display-mode: standalone)').matches 
+         || window.navigator.standalone === true;
+}
+
+function showInstallMessage() {
+  const installBtn = document.querySelector(".Download-app");
+  const container = document.getElementById("install-container");
+
+  if (!installBtn || !container) return;
+
+  // إخفاء إذا مثبت
+  if (isAppInstalled() || localStorage.getItem("appInstalled") === "true") {
+    container.style.display = "none";
+    return;
+  }
+
+  // 🔥 إظهار فقط إذا التثبيت الحقيقي متاح
+  if (deferredPrompt) {
+    container.style.display = "block";
+  }
+
+  installBtn.onclick = async () => {
+    if (!deferredPrompt) return;
+
+    deferredPrompt.prompt();
+    const result = await deferredPrompt.userChoice;
+
+    if (result.outcome === 'accepted') {
       localStorage.setItem("appInstalled", "true");
-    
-      const container = document.getElementById("install-container");
-      if (container) container.style.display = "none";
-    });
-    
-    // ✅ عند التحميل (هنا نغطي الكمبيوتر)
-    window.addEventListener("load", () => {
-      const container = document.getElementById("install-container");
-      if (container) container.style.display = "none";
-    
-      if (!isAppInstalled()) {
-        // 🔥 نجبر الظهور لو يدعم التثبيت (كمبيوتر)
-        showInstallMessage(true);
-      }
-    });
+      container.style.display = "none";
+    }
+
+    deferredPrompt = null;
+  };
+}
+
+// ✅ الحدث الحقيقي الوحيد للتثبيت
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  showInstallMessage();
+});
+
+window.addEventListener('appinstalled', () => {
+  localStorage.setItem("appInstalled", "true");
+
+  const container = document.getElementById("install-container");
+  if (container) container.style.display = "none";
+});
+
+// إخفاء بالبداية
+window.addEventListener("load", () => {
+  const container = document.getElementById("install-container");
+  if (container) container.style.display = "none";
+});
     </script>
 
     <script src="Script/app.js"></script>
