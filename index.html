@@ -82,25 +82,25 @@
 
     <script>
     let deferredPrompt;
-
+        
     function isAppInstalled() {
       return window.matchMedia('(display-mode: standalone)').matches 
              || window.navigator.standalone === true;
     }
-
+    
     function showInstallMessage() {
       const installBtn = document.querySelector(".Download-app");
       const container = document.getElementById("install-container");
     
       if (!installBtn || !container) return;
     
-      // إخفاء الزر إذا التطبيق مثبت
+      // إخفاء إذا مثبت
       if (isAppInstalled() || localStorage.getItem("appInstalled") === "true") {
         container.style.display = "none";
         return;
       }
     
-      // إظهار الزر
+      // إظهار فقط عند توفر prompt
       container.style.display = "block";
     
       installBtn.onclick = async () => {
@@ -117,21 +117,26 @@
         deferredPrompt = null;
       };
     }
-
+    
+    // 🔥 هنا المهم: لا يظهر إلا بعد beforeinstallprompt
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
       showInstallMessage();
     });
-
+    
     window.addEventListener('appinstalled', () => {
       localStorage.setItem("appInstalled", "true");
     
       const container = document.getElementById("install-container");
       if (container) container.style.display = "none";
     });
-
+    
+    // تأكيد الإخفاء عند التحميل
     window.addEventListener("load", () => {
+      const container = document.getElementById("install-container");
+      if (container) container.style.display = "none";
+    
       if (!isAppInstalled()) {
         console.log("التطبيق غير مثبت");
       } else {
