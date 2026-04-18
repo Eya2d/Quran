@@ -44,7 +44,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   async function ensureData() {
     if (dataReady) return;
-    // تحميل DATA_RAW وبناء localData
     const all = await getCategoryData('الكل');
     localData = { الكل: [...all] };
     CATEGORIES.forEach(cat => {
@@ -52,7 +51,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
     dataReady = true;
 
-    // جلب العناوين الحقيقية في الخلفية (مرة واحدة فقط)
     if (!enrichDone) {
       enrichDone = true;
       enrichVideos(localData.الكل).then(enriched => {
@@ -70,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   // ===== RENDER HISTORY =====
+  // استبدال <a href> بـ <div onclick> في سجل المشاهدة
   function renderHistory() {
     const history = getWatchHistory();
     if (!history.length) {
@@ -82,14 +81,13 @@ document.addEventListener("DOMContentLoaded", () => {
       const cat   = encodeURIComponent(v.category);
       const ago   = timeAgo(v.watchedAt);
       return `
-        <a class="cooo x-btn" href="watch.html?id=${v.id}&cat=${cat}"
-           onclick="addToWatchHistory(${safeV})">
+        <div class="cooo x-btn" tabindex="0" onclick="addToWatchHistory(${safeV}); window.location.href='watch.html?id=${v.id}&cat=${cat}'">
           <imga><img src="${thumb}" alt="${v.title}" loading="lazy" /></imga>
           <div class="history-card-info">
             <div class="history-card-title">${v.title}</div>
             <span class="history-time">${ago}</span>
           </div>
-        </a>`;
+        </div>`;
     }).join('');
   }
 
@@ -129,11 +127,9 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // تحميل البيانات إن لم تكن جاهزة بعد
     if (!dataReady) {
       resultsGrid.innerHTML = '<p class="no-results direction" style="opacity:.5">جاري التحميل...</p>';
       await ensureData();
-      // إن تغير النص أثناء التحميل، استخدم الحالي
       if (searchInput.value.trim() !== q) return;
     }
 
@@ -143,7 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
       v.title.includes(q) || v.category.includes(q)
     );
 
-    // ===== تخليط النتائج عشوائياً في كل بحث =====
     const results = shuffleArray(matched).slice(0, 10);
 
     if (!results.length) {
@@ -151,18 +146,18 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
+    // استبدال <a href> بـ <div onclick> في نتائج البحث
     resultsGrid.innerHTML = results.map(v => {
       const safeV = JSON.stringify(v).replace(/"/g, '&quot;');
       const cat   = encodeURIComponent(v.category);
       return `
-        <a class="coopp" href="watch.html?id=${v.id}&cat=${cat}"
-           onclick="addToWatchHistory(${safeV})">
+        <div class="coopp" tabindex="0" onclick="addToWatchHistory(${safeV}); window.location.href='watch.html?id=${v.id}&cat=${cat}'">
           <imga><img src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" /></imga>
           <div class="vid-card-info">
             <div class="vid-card-title">${v.title}</div>
             <div class="vid-card-cat">${v.category}</div>
           </div>
-        </a>`;
+        </div>`;
     }).join('');
   }
 
@@ -186,7 +181,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // ===== INIT =====
   renderHistory();
   updatePlaceholder();
-  // لا يوجد تحميل للبيانات هنا — يحدث فقط عند أول بحث
 });
 
 
@@ -214,7 +208,7 @@ window.addEventListener('mouseup', endDrag);
 window.addEventListener('mouseleave', endDrag);
 
 document.addEventListener('click', function (e) {
-  const link = e.target.closest('a, .cooo.x-btn');
+  const link = e.target.closest('.cooo.x-btn');
   if (!link) return;
 
   if (blockNextClick) {
