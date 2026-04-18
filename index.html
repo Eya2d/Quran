@@ -88,7 +88,18 @@
              || window.navigator.standalone === true;
     }
     
-    function showInstallMessage() {
+    // ✅ التحقق من إمكانية التثبيت (خصوصًا للكمبيوتر)
+    function canInstallManually() {
+      const isSecure = location.protocol === "https:";
+      const hasSW = 'serviceWorker' in navigator;
+    
+      // Chrome / Edge غالبًا يدعمون التثبيت على الكمبيوتر
+      const isDesktopChrome = /Chrome|Edg/.test(navigator.userAgent);
+    
+      return isSecure && hasSW && isDesktopChrome;
+    }
+    
+    function showInstallMessage(force = false) {
       const installBtn = document.querySelector(".Download-app");
       const container = document.getElementById("install-container");
     
@@ -100,25 +111,32 @@
         return;
       }
     
-      // إظهار فقط عند توفر prompt
-      container.style.display = "block";
+      // إظهار إذا فيه prompt أو دعم يدوي (كمبيوتر)
+      if (deferredPrompt || force || canInstallManually()) {
+        container.style.display = "block";
+      }
     
       installBtn.onclick = async () => {
-        if (!deferredPrompt) return;
-      
-        deferredPrompt.prompt();
-        const result = await deferredPrompt.userChoice;
-      
-        if (result.outcome === 'accepted') {
-          localStorage.setItem("appInstalled", "true");
-          container.style.display = "none";
+        // ✅ لو فيه prompt (موبايل + بعض المتصفحات)
+        if (deferredPrompt) {
+          deferredPrompt.prompt();
+          const result = await deferredPrompt.userChoice;
+        
+          if (result.outcome === 'accepted') {
+            localStorage.setItem("appInstalled", "true");
+            container.style.display = "none";
+          }
+        
+          deferredPrompt = null;
+        } 
+        // ✅ fallback للكمبيوتر
+        else {
+          alert("يمكنك تثبيت التطبيق من قائمة المتصفح (⋮) ثم 'تثبيت التطبيق'");
         }
-      
-        deferredPrompt = null;
       };
     }
     
-    // 🔥 هنا المهم: لا يظهر إلا بعد beforeinstallprompt
+    // 🔥 عند توفر الحدث (موبايل غالبًا)
     window.addEventListener('beforeinstallprompt', (e) => {
       e.preventDefault();
       deferredPrompt = e;
@@ -132,15 +150,14 @@
       if (container) container.style.display = "none";
     });
     
-    // تأكيد الإخفاء عند التحميل
+    // ✅ عند التحميل (هنا نغطي الكمبيوتر)
     window.addEventListener("load", () => {
       const container = document.getElementById("install-container");
       if (container) container.style.display = "none";
     
       if (!isAppInstalled()) {
-        console.log("التطبيق غير مثبت");
-      } else {
-        console.log("التطبيق مثبت");
+        // 🔥 نجبر الظهور لو يدعم التثبيت (كمبيوتر)
+        showInstallMessage(true);
       }
     });
     </script>
