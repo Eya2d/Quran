@@ -251,6 +251,7 @@ imga img {
     margin-left: 14px;
     flex: 1 1;
     line-height: 1.3;
+    width: 153px;
 }
 .title-di p {
     overflow-wrap: break-word;
