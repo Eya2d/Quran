@@ -1,405 +1,217 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const searchInput = document.getElementById('search-input');
-  const resultsDiv  = document.getElementById('results-div');
-  const resultsGrid = document.getElementById('results-grid');
-  const historyGrid = document.getElementById('history-grid');
-  const filterDiv   = document.getElementById('filter-div');
-  const searchContainer = document.querySelector('.searsh');
-  const deleteHistoryBtn = document.getElementById('delete-history');
+// ===== قائمة الأقسام =====
+const CATEGORIES = [
+"تلاوات خاشعة",
+"مشاري العفاسي",
+"عبد الباسط عبد الصمد",
+"محمد صديق المنشاوي",
+"ماهر المعيقلي",
+"سعد الغامدي",
+"أحمد العجمي",
+"عبد الرحمن السديس",
+"فارس عباد",
+"هاني الرفاعي",
+"ياسر الدوسري",
+"ناصر القطامي",
+"إدريس أبكر",
+"خالد الجليل",
+"محمد أيوب",
+"علي جابر",
+"صلاح البدير",
+"بندر بليلة",
+"إسلام صبحي",
+"أبو بكر الشاطري",
+"عبد الله بصفر",
+"محمود خليل الحصري",
+"محمد جبريل",
+"سعود الشريم",
+"عبد الله عواد الجهني",
+"محمد محمود الطبلاوي",
+"إبراهيم الأخضر",
+"عبد الرشيد صوفي",
+"مصطفى إسماعيل",
+"محمود علي البنا",
+"علي الحذيفي",
+"عبد الولي الأركاني",
+"صالح بوخاطر",
+"عبد العزيز الزهراني",
+"محمد المحيسني",
+];
 
-  let activeFilter = 'الكل';
+// ===== LAZY LOAD DATA_RAW =====
+let _rawLoaded = false;
+let _rawLoadingPromise = null;
 
-  // ===== دالة التخليط العشوائي =====
-  function shuffleArray(arr) {
-    const shuffled = [...arr];
-    for (let i = shuffled.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-    return shuffled;
-  }
+function _loadRaw() {
+  if (_rawLoaded) return Promise.resolve();
+  if (_rawLoadingPromise) return _rawLoadingPromise;
 
-  // Function to update placeholder based on active filter
-  function updatePlaceholder() {
-    if (activeFilter === 'الكل') {
-      searchInput.placeholder = 'إبحث بالنص او بالقسم...';
-    } else {
-      searchInput.placeholder = `إبحث في قسم ${activeFilter}...`;
-    }
-  }
-
-  // ===== بناء قائمة الفلتر ديناميكيًا =====
-  filterDiv.innerHTML = `<div data-cat="الكل" class="coco">الكل</div>`;
-  CATEGORIES.forEach(cat => {
-    const div = document.createElement('div');
-    div.dataset.cat = cat;
-    div.textContent = cat;
-    filterDiv.appendChild(div);
+  _rawLoadingPromise = new Promise((resolve, reject) => {
+    const script = document.createElement('script');
+    script.src = 'Script/data-raw.js';
+    script.onload = () => {
+      _rawLoaded = true;
+      resolve();
+    };
+    script.onerror = reject;
+    document.head.appendChild(script);
   });
 
-  // ===== localData — يُحمَّل lazy عند أول بحث =====
-  let localData = null;
-  let dataReady = false;
-  let enrichDone = false;
+  return _rawLoadingPromise;
+}
 
-  async function ensureData() {
-    if (dataReady) return;
-    const all = await getCategoryData('الكل');
-    localData = { الكل: [...all] };
-    CATEGORIES.forEach(cat => {
-      localData[cat] = all.filter(v => v.category === cat);
-    });
-    dataReady = true;
+// ===== getCategoryData — القسم المطلوب فقط =====
+const _dataCache = {};
 
-    if (!enrichDone) {
-      enrichDone = true;
-      enrichVideos(localData.الكل).then(enriched => {
-        localData.الكل = enriched;
-        enriched.forEach(v => {
-          CATEGORIES.forEach(cat => {
-            if (!localData[cat]) return;
-            const idx = localData[cat].findIndex(d => d.id === v.id);
-            if (idx !== -1) localData[cat][idx].title = v.title;
-          });
-        });
-        if (searchInput.value.trim()) doSearch(searchInput.value);
-      });
-    }
-  }
+async function getCategoryData(cat) {
+  if (_dataCache[cat]) return _dataCache[cat];
 
-  // ===== RENDER HISTORY =====
-  // استبدال <a href> بـ <div onclick> في سجل المشاهدة
-  function renderHistory() {
-    const history = getWatchHistory();
-    if (!history.length) {
-      historyGrid.innerHTML = '<p class="empty-history">لم تشاهد أي فيديو بعد</p>';
-      return;
-    }
-    historyGrid.innerHTML = history.map(v => {
-      const safeV = JSON.stringify(v).replace(/"/g, '&quot;');
-      const thumb = getYoutubeThumbnail(v.id);
-      const cat   = encodeURIComponent(v.category);
-      const ago   = timeAgo(v.watchedAt);
-      return `
-        <div class="cooo x-btn" tabindex="0" onclick="addToWatchHistory(${safeV}); window.location.href='watch.html?id=${v.id}&cat=${cat}'">
-          <imga><img src="${thumb}" alt="${v.title}" loading="lazy" /></imga>
-          <div class="history-card-info">
-            <div class="history-card-title">${v.title}</div>
-            <span class="history-time">${ago}</span>
-          </div>
-        </div>`;
-    }).join('');
-  }
+  // تحميل data-raw.js إن لم يكن محملاً
+  await _loadRaw();
 
-  // ===== CLEAR HISTORY =====
-  deleteHistoryBtn.addEventListener('click', () => {
-    const history = getWatchHistory();
-    if (!history.length) return;
+  // استخراج القسم المطلوب فقط من DATA_RAW
+  const cache = getTitleCache();
 
-    const confirmed = confirm('هل تريد حذف سجل المشاهدة؟');
-    if (!confirmed) return;
-
-    localStorage.removeItem('watchHistory');
-    historyGrid.innerHTML = '<p class="empty-history">لم تشاهد أي فيديو بعد</p>';
-  });
-
-  // ===== HIDE SEARCH ON OUTSIDE CLICK =====
-  document.addEventListener('click', (e) => {
-    if (searchContainer && !searchContainer.contains(e.target)) {
-      resultsDiv.classList.remove('active');
-      resultsGrid.innerHTML = '';
-    }
-  });
-
-  // ===== SEARCH =====
-  async function doSearch(q) {
-    q = q.trim();
-    if (!q) {
-      resultsDiv.classList.remove('active');
-      resultsGrid.innerHTML = '';
-      return;
-    }
-    resultsDiv.classList.add('active');
-
-    const catMatch = CATEGORIES.find(k => k === q);
-    if (catMatch && activeFilter === 'الكل') {
-      window.location.href = `section.html?cat=${encodeURIComponent(catMatch)}`;
-      return;
-    }
-
-    if (!dataReady) {
-      resultsGrid.innerHTML = '<p class="no-results direction" style="opacity:.5">جاري التحميل...</p>';
-      await ensureData();
-      if (searchInput.value.trim() !== q) return;
-    }
-
-    const pool = activeFilter === 'الكل' ? localData.الكل : (localData[activeFilter] || []);
-
-    const matched = pool.filter(v =>
-      v.title.includes(q) || v.category.includes(q)
+  if (cat === 'الكل') {
+    const all = CATEGORIES.flatMap(c =>
+      (DATA_RAW[c] || [])
+        .map(v => {
+          const id = cleanVideoId(v.id);
+          return id ? { id, category: c, title: cache[id] || "جاري التحميل..." } : null;
+        })
+        .filter(Boolean)
     );
+    _dataCache['الكل'] = all;
 
-    const results = shuffleArray(matched).slice(0, 10);
-
-    if (!results.length) {
-      resultsGrid.innerHTML = '<p class="no-results">لا توجد نتائج مطابقة</p>';
-      return;
-    }
-
-    // استبدال <a href> بـ <div onclick> في نتائج البحث
-    resultsGrid.innerHTML = results.map(v => {
-      const safeV = JSON.stringify(v).replace(/"/g, '&quot;');
-      const cat   = encodeURIComponent(v.category);
-      return `
-        <div class="coopp" tabindex="0" onclick="addToWatchHistory(${safeV}); window.location.href='watch.html?id=${v.id}&cat=${cat}'">
-          <imga><img src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" /></imga>
-          <div class="vid-card-info">
-            <div class="vid-card-title">${v.title}</div>
-            <div class="vid-card-cat">${v.category}</div>
-          </div>
-        </div>`;
-    }).join('');
+    // تحرير DATA_RAW من الذاكرة بعد البناء
+    _freeRaw();
+    return all;
   }
 
-  searchInput.addEventListener('input', () => doSearch(searchInput.value));
+  const raw = DATA_RAW[cat] || [];
+  const result = raw
+    .map(v => {
+      const id = cleanVideoId(v.id);
+      return id ? { id, category: cat, title: cache[id] || "جاري التحميل..." } : null;
+    })
+    .filter(Boolean);
 
-  // ===== FILTER ANCHORS (ديناميكي) =====
-  filterDiv.addEventListener('click', (e) => {
-    const div = e.target.closest('div[data-cat]');
-    if (!div) return;
-  
-    filterDiv.querySelectorAll('div[data-cat]').forEach(b => b.classList.remove('coco'));
-    div.classList.add('coco');
-  
-    activeFilter = div.dataset.cat;
-    
-    updatePlaceholder();
-    
-    doSearch(searchInput.value);
-  });
+  _dataCache[cat] = result;
 
-  // ===== INIT =====
-  renderHistory();
-  updatePlaceholder();
-});
-
-
-// --------------------------------------------------------------------------------------------
-
-const container = document.querySelector('.scroll-container');
-
-let isDown = false;
-let startX;
-let scrollLeft;
-let dragDirection = null;
-let isTouchDevice = false;
-let hasMoved = false;
-let isDragging = false;
-let blockNextClick = false;
-
-container.addEventListener('touchstart', startDrag);
-container.addEventListener('mousedown', startDrag);
-
-window.addEventListener('touchmove', moveDrag);
-window.addEventListener('mousemove', moveDrag);
-
-window.addEventListener('touchend', endDrag);
-window.addEventListener('mouseup', endDrag);
-window.addEventListener('mouseleave', endDrag);
-
-document.addEventListener('click', function (e) {
-  const link = e.target.closest('.cooo.x-btn');
-  if (!link) return;
-
-  if (blockNextClick) {
-    e.preventDefault();
-    e.stopPropagation();
-    blockNextClick = false;
-  }
-}, true);
-
-// =========================
-
-function startDrag(e) {
-  if (e.button === 2) return;
-
-  isDown = true;
-  hasMoved = false;
-  isDragging = false;
-
-  isTouchDevice = e.type === 'touchstart';
-
-  if (e.touches) {
-    startX = e.touches[0].pageX - container.offsetLeft;
-  } else {
-    startX = e.pageX - container.offsetLeft;
-    e.preventDefault();
-  }
-
-  scrollLeft = container.scrollLeft;
-  dragDirection = null;
-
-  container.style.cursor = 'grabbing';
-  document.body.style.userSelect = 'none';
+  // تحرير DATA_RAW من الذاكرة بعد استخراج القسم
+  _freeRaw();
+  return result;
 }
 
-// =========================
-
-function moveDrag(e) {
-  if (!isDown) return;
-
-  let currentX;
-  if (e.touches) {
-    currentX = e.touches[0].pageX - container.offsetLeft;
-  } else {
-    currentX = e.pageX - container.offsetLeft;
-  }
-
-  const walk = (currentX - startX) * 1.2;
-
-  if (Math.abs(walk) > 5) {
-    hasMoved = true;
-    isDragging = true;
-  }
-
-  if (walk > 2) dragDirection = 'right';
-  else if (walk < -2) dragDirection = 'left';
-
-  if (e.cancelable) e.preventDefault();
-
-  container.scrollLeft = scrollLeft - walk;
-}
-
-// =========================
-
-function endDrag(e) {
-  if (!isDown) return;
-
-  isDown = false;
-
-  container.style.cursor = 'grab';
-  document.body.style.userSelect = '';
-
-  if (hasMoved || isDragging) {
-    blockNextClick = true;
-  }
-
-  if (isTouchDevice || e.type === 'touchend') {
-    setTimeout(() => {
-      snapToClosest();
-
-      setTimeout(() => {
-        hasMoved = false;
-        isDragging = false;
-      }, 300);
-    }, 10);
-  } else {
-    setTimeout(() => {
-      hasMoved = false;
-      isDragging = false;
-    }, 100);
+// إزالة DATA_RAW من الذاكرة بعد الاستخراج
+function _freeRaw() {
+  if (typeof DATA_RAW !== 'undefined') {
+    try { window.DATA_RAW = null; } catch(_) {}
   }
 }
 
-// =========================
-
-function snapToClosest() {
-  const items = Array.from(container.querySelectorAll('.cooo.x-btn'));
-  if (items.length === 0) return;
-
-  const containerStyle = getComputedStyle(container);
-  const containerPaddingLeft = parseFloat(containerStyle.paddingLeft);
-  const containerPaddingRight = parseFloat(containerStyle.paddingRight);
-
-  const containerRect = container.getBoundingClientRect();
-  const containerCenter = containerRect.left + (containerRect.width / 2);
-
-  let targetItem = null;
-
-  if (dragDirection === 'left') {
-    let minLeftDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const distance = Math.abs(rect.left - (containerRect.left + containerPaddingLeft));
-      if (distance < minLeftDistance) {
-        minLeftDistance = distance;
-        targetItem = item;
-      }
-    });
-  } else if (dragDirection === 'right') {
-    let minRightDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const distance = Math.abs(rect.right - (containerRect.right - containerPaddingRight));
-      if (distance < minRightDistance) {
-        minRightDistance = distance;
-        targetItem = item;
-      }
-    });
-  } else {
-    let minCenterDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const itemCenter = rect.left + (rect.width / 2);
-      const distance = Math.abs(itemCenter - containerCenter);
-      if (distance < minCenterDistance) {
-        minCenterDistance = distance;
-        targetItem = item;
-      }
-    });
+// ===== DATA Proxy — للتوافق مع الكود القديم =====
+const DATA = new Proxy({}, {
+  get(_, prop) {
+    if (_dataCache[prop] !== undefined) return _dataCache[prop];
+    return undefined;
+  },
+  set(_, prop, value) {
+    _dataCache[prop] = value;
+    return true;
+  },
+  has(_, prop) {
+    return prop === 'الكل' || CATEGORIES.includes(prop);
   }
+});
 
-  if (targetItem) {
-    const targetRect = targetItem.getBoundingClientRect();
-    const itemIndex = items.indexOf(targetItem);
-    const isFirst = itemIndex === 0;
-    const isLast = itemIndex === items.length - 1;
+// ===== CLEAN VIDEO ID =====
+function cleanVideoId(id) {
+  if (!id) return "";
+  return id.split('&')[0].split('?')[0].trim();
+}
 
-    let scrollOffset;
+// ===== TITLE CACHE =====
+const TITLE_CACHE_KEY = "yt_title_cache_v1";
 
-    if (isFirst) {
-      scrollOffset = container.scrollLeft + (targetRect.left - containerRect.left) - containerPaddingLeft;
-    } else if (isLast) {
-      scrollOffset = container.scrollLeft + (targetRect.right - containerRect.right) + containerPaddingRight;
-    } else {
-      const targetCenter = targetRect.left + (targetRect.width / 2);
-      const containerCenterOffset = containerRect.left + (containerRect.width / 2);
-      scrollOffset = container.scrollLeft + (targetCenter - containerCenterOffset);
-    }
+function getTitleCache() {
+  try { return JSON.parse(localStorage.getItem(TITLE_CACHE_KEY) || "{}"); }
+  catch { return {}; }
+}
+function saveTitleCache(cache) {
+  try { localStorage.setItem(TITLE_CACHE_KEY, JSON.stringify(cache)); }
+  catch {}
+}
 
-    container.scrollTo({
-      left: scrollOffset,
-      behavior: 'smooth'
-    });
+// ===== FETCH TITLE =====
+async function fetchVideoTitle(id) {
+  const cleanId = cleanVideoId(id);
+  if (!cleanId) return null;
+
+  const cache = getTitleCache();
+  if (cache[cleanId]) return cache[cleanId];
+
+  try {
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${cleanId}&format=json`
+    );
+    if (!res.ok) throw new Error();
+    const d = await res.json();
+    const title = d.title || cleanId;
+    const c = getTitleCache();
+    c[cleanId] = title;
+    saveTitleCache(c);
+    return title;
+  } catch {
+    return cleanId;
   }
 }
 
-// =========================
-
-let lastScrollLeft = 0;
-container.addEventListener('scroll', () => {
-  if (isDown && isTouchDevice) {
-    const currentScrollLeft = container.scrollLeft;
-    if (currentScrollLeft > lastScrollLeft) dragDirection = 'right';
-    else if (currentScrollLeft < lastScrollLeft) dragDirection = 'left';
-    lastScrollLeft = currentScrollLeft;
+// ===== ENRICH VIDEOS =====
+async function enrichVideos(videos) {
+  const cache = getTitleCache();
+  const validVideos = videos.filter(v => cleanVideoId(v.id));
+  const missing = validVideos.filter(v => !cache[cleanVideoId(v.id)]);
+  const BATCH = 6;
+  for (let i = 0; i < missing.length; i += BATCH) {
+    await Promise.all(missing.slice(i, i + BATCH).map(v => fetchVideoTitle(v.id)));
   }
-});
+  const updated = getTitleCache();
+  return videos.map(v => ({
+    ...v,
+    id: cleanVideoId(v.id),
+    title: updated[cleanVideoId(v.id)] || v.title || cleanVideoId(v.id)
+  }));
+}
 
-// =========================
+// ===== WATCH HISTORY =====
+function getWatchHistory() {
+  try { return JSON.parse(localStorage.getItem("watchHistory") || "[]"); }
+  catch { return []; }
+}
 
-container.addEventListener('dragstart', (e) => {
-  if (isDown || hasMoved || isDragging) {
-    e.preventDefault();
-    return false;
-  }
-});
+function addToWatchHistory(video) {
+  if (!video.id) return;
+  let h = getWatchHistory();
+  h = h.filter(v => v.id !== video.id);
+  h.unshift({ ...video, watchedAt: Date.now() });
+  h = h.slice(0, 5);
+  localStorage.setItem("watchHistory", JSON.stringify(h));
+}
 
-container.style.cursor = 'grab';
+function timeAgo(ts) {
+  const s = Math.floor((Date.now() - ts) / 1000);
+  const m = Math.floor(s / 60), hr = Math.floor(m / 60),
+        d = Math.floor(hr / 24), w = Math.floor(d / 7), mo = Math.floor(d / 30);
+  if (mo > 0) return `منذ ${mo} شهر`;
+  if (w  > 0) return `منذ ${w} أسبوع`;
+  if (d  > 0) return `منذ ${d} يوم`;
+  if (hr > 0) return `منذ ${hr} ساعة`;
+  if (m  > 0) return `منذ ${m} دقيقة`;
+  return "منذ لحظات";
+}
 
-container.addEventListener('contextmenu', (e) => {
-  if (isDown || isDragging) {
-    e.preventDefault();
-    return false;
-  }
-});
+function getYoutubeThumbnail(id) {
+  const cleanId = cleanVideoId(id);
+  if (!cleanId) return "";
+  return `https://img.youtube.com/vi/${cleanId}/mqdefault.jpg`;
+}
