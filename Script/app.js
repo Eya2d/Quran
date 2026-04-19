@@ -59,11 +59,11 @@ document.addEventListener("DOMContentLoaded", () => {
   style.innerHTML = `
     #scrollTopBtn {
       position: fixed;
-      bottom: 30px;
-      right: 30px;
-      background: #74abff;
-      color: #454a58;
-      border: none;
+      bottom: 40px;
+      right: 40px;
+      background: #fff;
+      color: rgb(21, 137, 245);
+      border: solid 1px #177ccb33;
       width: 48px;
       height: 48px;
       border-radius: 50%;
@@ -71,7 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
       font-size: 24px;
       box-shadow: 0 5px 15px rgb(9 18 46 / 20%);
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateX(20px);
       pointer-events: none;
       transition: all 0.3s ease;
       z-index: 9999;
@@ -79,11 +79,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     #scrollTopBtn.show {
       opacity: 1;
-      transform: translateY(0);
+      transform: translateX(0);
       pointer-events: auto;
-      border: solid 1px #177ccb33;
-      background-color: #ffffff !important;
-      color: rgb(21, 137, 245);
     }
   `;
   document.head.appendChild(style);
