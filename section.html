@@ -13,13 +13,13 @@
   <style>
     :root {
       --bg: #0a0a0f;
-    --surface: #13131a00;
-    --border: #b8b8ba;
-    --accent: #e63946;
-    --accent2: #ff6b6b;
-    --gold: #f4a261;
-    --muted: #8888aa;
-    --radius: 14px;
+      --surface: #13131a00;
+      --border: #b8b8ba;
+      --accent: #e63946;
+      --accent2: #ff6b6b;
+      --gold: #f4a261;
+      --muted: #8888aa;
+      --radius: 14px;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -60,7 +60,7 @@
       text-decoration: none;
       flex-shrink: 0;
     }
-    .logo span { color: #177ccb;}
+    .logo span { color: #177ccb; }
 
     .back-btn {
       display: flex;
@@ -219,12 +219,41 @@
       font-size: 1rem;
     }
 
+    /* ===== MOBILE: 2 كروت بجانب بعض بعرض 360 ===== */
     @media (max-width: 600px) {
       header { padding: 12px 16px; }
       .logo { font-size: 1.3rem; }
       main { padding: 24px 16px; }
-      .section-hero a { font-size: 1.6rem; }
-      #videos-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+      .section-hero x { font-size: 1.6rem; }
+
+      #videos-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+
+      /* الكروت داخل .cards تأخذ العرض الكامل للعمود */
+      .cards {
+        display: contents;
+      }
+
+      /* الصورة بنسبة ثابتة لضمان نفس الحجم على كلا الكرتين */
+      .vid-card img {
+        width: 100%;
+        aspect-ratio: 16/9;
+        object-fit: cover;
+        display: block;
+        /* border-radius: 13px 13px 0 0; */
+      }
+
+      .vid-card {
+        width: 100%;
+      }
+    }
+
+    /* انيميشن التحميل التدريجي */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -232,7 +261,6 @@
 
 <header>
   <a class="logo" href=""><span>نـ</span>ور القرآن</a>
-  <!-- استبدال <a href> بـ <div onclick> -->
   <div class="back-btn" onclick="window.location.href='index.html'">← الرئيسية</div>
 </header>
 
@@ -253,21 +281,18 @@
 </main>
 
 <script src="Script/app.js"></script>
-<!--
-  ✅ data.js فقط — data-raw.js يُحمَّل تلقائياً عند فتح صفحة القسم
--->
 <script src="Script/data.js"></script>
 <script>
   const params = new URLSearchParams(location.search);
   const cat    = params.get('cat') || 'شائعة';
   let videos   = [];
   let filtered = [];
- 
+
   const titleLink     = document.getElementById('section-title-link');
   const countEl       = document.getElementById('section-count');
   const sectionSearch = document.getElementById('section-search');
   const grid          = document.getElementById('videos-grid');
- 
+
   titleLink.textContent = cat;
 
   // مؤشر تحميل أولي
@@ -277,28 +302,64 @@
   function navigateToWatch(id, cat) {
     window.location.href = `watch.html?id=${id}&cat=${cat}`;
   }
- 
-  // ===== رسم الشبكة =====
-  // استبدال <a href> بـ <div onclick> في بطاقات الفيديو
-  function renderGrid(list) {
+
+  // ===== دالة بناء HTML لكرت واحد =====
+  function buildCardHTML(v, i, delayOffset) {
+    const delay = delayOffset !== undefined ? delayOffset : i * 40;
+    return `
+    <div class="cards">
+      <div class="vid-card" id="${v.id}"
+         style="animation-delay:${delay}ms"
+         onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')}); navigateToWatch('${v.id}', '${encodeURIComponent(v.category)}')">
+        <img src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
+        <div class="vid-card-title" id="title-${v.id}">${v.title}</div>
+      </div>
+    </div>`;
+  }
+
+  // ===== رسم الشبكة مع تحميل تدريجي 1 و1 (للعرض الأول فقط) =====
+  function renderGrid(list, progressive) {
     if (!list.length) {
       grid.innerHTML = '<p class="no-results">لا توجد نتائج</p>';
       countEl.textContent = '';
       return;
     }
     countEl.textContent = `${list.length} فيديو`;
-    grid.innerHTML = list.map((v, i) => `
-    <div class="cards">
-      <div class="vid-card" id="${v.id}"
-         style="animation-delay:${i * 40}ms"
-         onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')}); navigateToWatch('${v.id}', '${encodeURIComponent(v.category)}')">
-        <img src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
-        <div class="vid-card-title" id="title-${v.id}">${v.title}</div>
-      </div>
-    </div>
-    `).join('');
+
+    if (!progressive) {
+      // البحث أو إعادة الرسم: عرض فوري بدون تأخير
+      grid.innerHTML = list.map((v, i) => buildCardHTML(v, i)).join('');
+      return;
+    }
+
+    // التحميل التدريجي: 1 كرت كل 1 ملي ثانية (للمرة الأولى فقط)
+    grid.innerHTML = '';
+    const BATCH = 1;
+    let index = 0;
+
+    function appendBatch() {
+      const chunk = list.slice(index, index + BATCH);
+      if (!chunk.length) return;
+
+      const fragment = document.createDocumentFragment();
+      chunk.forEach((v, i) => {
+        const wrapper = document.createElement('div');
+        // تأخير الأنيميشن داخل كل batch يبدأ من 0
+        wrapper.innerHTML = buildCardHTML(v, i, i * 40);
+        fragment.appendChild(wrapper.firstElementChild);
+      });
+      grid.appendChild(fragment);
+
+      index += BATCH;
+
+      if (index < list.length) {
+        setTimeout(appendBatch, 1); // 1 ملي ثانية بين كل batch
+      }
+    }
+
+    appendBatch();
   }
- 
+
   // ===== تحديث عناوين الكروت =====
   function updateTitlesInGrid(enriched) {
     enriched.forEach(v => {
@@ -309,22 +370,22 @@
     const q = sectionSearch.value.trim();
     if (q) {
       filtered = videos.filter(v => v.title.includes(q));
-      renderGrid(filtered);
+      renderGrid(filtered, false); // البحث: بدون تحميل تدريجي
     }
   }
- 
-  // ===== البحث =====
+
+  // ===== البحث: عرض فوري بدون تحميل تدريجي =====
   sectionSearch.addEventListener('input', () => {
     const q = sectionSearch.value.trim();
     filtered = q ? videos.filter(v => v.title.includes(q)) : [...videos];
-    renderGrid(filtered);
+    renderGrid(filtered, false); // false = عرض فوري أثناء البحث
   });
- 
+
   // ===== تحميل البيانات عند فتح الصفحة (مرة واحدة فقط) =====
   getCategoryData(cat).then(data => {
     videos = data;
     filtered = [...videos];
-    renderGrid(videos);
+    renderGrid(videos, true); // true = تحميل تدريجي 1 و1
 
     // جلب العناوين الحقيقية
     enrichVideos(videos).then(enriched => {
