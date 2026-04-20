@@ -201,6 +201,16 @@ body .menu:focus-visible {
     opacity: .6;
     transition: ease 0s;
 }
+.menu :nth-child(2)::before {
+    position: absolute;
+    content: '';
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    margin: 0 14px;
+    background: #3a3a442b;
+}
 
 .coco {
     background-color: #1d82cf23 !important;
