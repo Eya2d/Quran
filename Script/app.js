@@ -115,6 +115,10 @@ document.addEventListener("DOMContentLoaded", () => {
 document.addEventListener("DOMContentLoaded", () => {
   const counters = document.querySelectorAll('.count');
 
+  const formatNumber = (num) => {
+    return Math.floor(num).toLocaleString(); // ✅ إضافة الفواصل
+  };
+
   const startCounting = (counter) => {
     const target = +counter.getAttribute('data-target');
     let count = 0;
@@ -124,10 +128,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (count < target) {
         count += increment;
-        counter.innerText = Math.floor(count);
+        counter.innerText = formatNumber(count); // ✅ استخدام التنسيق
         requestAnimationFrame(update);
       } else {
-        counter.innerText = target;
+        counter.innerText = formatNumber(target); // ✅ النهاية
       }
     };
 
@@ -138,7 +142,7 @@ document.addEventListener("DOMContentLoaded", () => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
         startCounting(entry.target);
-        observer.unobserve(entry.target); // يمنع التكرار
+        observer.unobserve(entry.target);
       }
     });
   }, {
