@@ -376,6 +376,7 @@
     }
 
     .sugg-card {
+      position: relative;
       display: flex;
       gap: 12px;
       text-decoration: none;
@@ -397,13 +398,44 @@
       transform: translateX(-3px);
     }
 
-    .sugg-thumb {
+    /* ===== حاوية الصورة مع time badge ===== */
+    .sugg-thumb-wrap {
+      position: relative;
       height: 73px;
       width: 130px;
       flex-shrink: 0;
+    }
+
+    .sugg-thumb {
+      height: 100%;
+      width: 100%;
       aspect-ratio: 16 / 9;
       object-fit: cover;
       border-radius: 10px;
+      display: block;
+    }
+
+    /* ===== time badge على صورة المقترحات ===== */
+    .sugg-thumb-wrap time {
+      position: absolute;
+      bottom: 5px;
+      left: 6px;
+      background: rgba(0, 0, 0, 0.72);
+      color: #fff;
+      font-size: 0.68rem;
+      font-weight: 700;
+      padding: 1px 6px;
+      border-radius: 4px;
+      direction: ltr;
+      font-family: 'Cairo', monospace;
+      letter-spacing: 0.5px;
+      z-index: 4;
+      line-height: 1.6;
+      display: none;
+    }
+
+    .sugg-thumb-wrap time.loaded {
+      display: block;
     }
 
     .sugg-info {
@@ -455,7 +487,7 @@
       header { padding: 12px 16px; }
       .logo { font-size: 1.3rem; }
       .video-title { font-size: 1.1rem; }
-      .sugg-thumb { width: 110px; }
+      .sugg-thumb-wrap { width: 110px; }
     }
 
     /* ===== MOBILE 360px ===== */
@@ -486,12 +518,11 @@
         width: 100%;
       }
 
-      .sugg-thumb {
+      .sugg-thumb-wrap {
         width: 130px;
         height: auto;
         aspect-ratio: 16 / 9;
         flex-shrink: 0;
-        /* border-radius: 8px; */
       }
 
       .sugg-info {
@@ -840,6 +871,16 @@
     } catch (_) {}
   });
 
+  // ===== تحديث time badge في المقترحات =====
+  function updateSuggTimeBadge(id, duration) {
+    const formatted = formatDuration(duration);
+    const el = document.getElementById('sugg-time-' + id);
+    if (el && formatted) {
+      el.textContent = formatted;
+      el.classList.add('loaded');
+    }
+  }
+
   // ===== بناء المقترحات =====
   function buildSuggestions(vid, cat, catVideos) {
     const currentIdx   = catVideos.findIndex(v => v.id === vid);
@@ -857,13 +898,23 @@
         suggList.innerHTML = '<p style="color:var(--muted);font-size:.85rem;padding:20px 0">لا توجد مقترحات</p>';
         return;
       }
+
+      const durCache = getDurationCache();
+
       suggList.innerHTML = list.map((v, i) => {
         const isCurrent = v.id === vid;
+        const cachedDur = durCache[cleanVideoId(v.id)];
+        const durFormatted = cachedDur ? formatDuration(cachedDur) : '';
+        const timeVisible = durFormatted ? ' loaded' : '';
+
         return `
         <div class="sugg-card${isCurrent ? ' coco2' : ''}"
            data-vid="${v.id}" data-cat="${encodeURIComponent(v.category)}"
            style="animation-delay:${i * 50}ms">
-          <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title || ''}" loading="lazy" />
+          <div class="sugg-thumb-wrap">
+            <time id="sugg-time-${v.id}" class="${timeVisible}">${durFormatted}</time>
+            <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title || ''}" loading="lazy" />
+          </div>
           <div class="sugg-info">
             <div class="sugg-title" id="st-${v.id}">${v.title || ''}</div>
             <span class="sugg-cat">${v.category}</span>
@@ -879,6 +930,11 @@
           addToWatchHistory({ id: cVid, category: cCat, title: card.querySelector('.sugg-title')?.textContent || '' });
           loadVideo(cVid, cCat);
         });
+      });
+
+      // ===== جلب مدة المقترحات بشكل تدريجي =====
+      enrichDurations(list, (id, duration) => {
+        updateSuggTimeBadge(id, duration);
       });
     }
 
