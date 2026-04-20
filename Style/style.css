@@ -208,8 +208,8 @@ body .menu:focus-visible {
     right: 0;
     bottom: 0;
     height: 1px;
-    margin: 0 14px;
-    background: #3a3a442b;
+    margin: 0 8px;
+    background: #3a3a441a;
 }
 
 .coco {
