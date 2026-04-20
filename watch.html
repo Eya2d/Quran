@@ -18,7 +18,7 @@
     --muted: #8888aa;
     --radius: 14px;
     }
-    * { box-sizing: border-box; margin: 0; padding: 0;overflow: auto; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
       background: #faf9f4;
@@ -290,7 +290,9 @@
       line-height: 1.4;
       color: var(--text);
       margin-bottom: 10px;
-      overflow: hidden;
+      /* منع تمدد العنوان الطويل */
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
 
     .video-badges {
@@ -310,12 +312,12 @@
       color: var(--muted);
       user-select: text !important;
     }
-    .badge.cat { 
+    .badge.cat {
       user-select: none !important;
       border-color: #177ccb33;
       background-color: #1d82cf23 !important;
       color: rgb(21, 137, 245);
-     }
+    }
     .cate {
       transition: all .3s;
       cursor: pointer;
@@ -348,9 +350,7 @@
     }
 
     /* ===== SIDEBAR ===== */
-    .sidebar {
-      overflow: initial;
-    }
+    .sidebar {}
 
     .sidebar-title {
       font-size: 0.8rem;
@@ -374,7 +374,6 @@
       display: flex;
       flex-direction: column;
       gap: 12px;
-      overflow: initial;
     }
 
     .sugg-card {
@@ -389,6 +388,8 @@
       transition: border-color .2s, transform .15s;
       animation: fadeUp .3s ease both;
       cursor: pointer;
+      /* منع تمدد الكرت بسبب العناوين الطويلة */
+      min-width: 0;
     }
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(10px); }
@@ -409,6 +410,8 @@
 
     .sugg-info {
       flex: 1;
+      /* منع تجاوز المحتوى */
+      min-width: 0;
       padding: 10px 0px 10px 12px;
       padding-bottom: 5px;
       display: flex;
@@ -426,6 +429,9 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
       color: black !important;
+      /* منع تمدد العنوان الطويل */
+      word-break: break-word;
+      overflow-wrap: break-word;
     }
 
     .sugg-cat {
@@ -455,6 +461,65 @@
       .video-title { font-size: 1.1rem; }
       .sugg-thumb { width: 110px; }
     }
+
+    /* ===== MOBILE 360px ===== */
+    @media (max-width: 600px) {
+      header {
+        padding: 10px 12px;
+        gap: 10px;
+      }
+      .logo { font-size: 1.2rem; }
+
+      main {
+        grid-template-columns: 1fr;
+        padding: 12px;
+        gap: 20px;
+      }
+
+      /* الفيديو يأخذ عرض الشاشة كاملاً بنسبة ثابتة */
+      .player-wrap {
+        width: 100%;
+        padding-top: 56.25%;
+        border-radius: 10px;
+      }
+
+      /* عنوان الفيديو الرئيسي */
+      .video-title {
+        font-size: 1rem;
+        word-break: break-word;
+        overflow-wrap: break-word;
+      }
+
+      /* المقترحات: صورة أصغر + عنوان لا يتمدد */
+      .sugg-card {
+        gap: 8px;
+        min-width: 0;
+        width: 100%;
+      }
+
+      .sugg-thumb {
+        width: 100px;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        flex-shrink: 0;
+        border-radius: 8px;
+      }
+
+      .sugg-info {
+        min-width: 0;
+        flex: 1;
+        padding: 6px 0 6px 8px;
+      }
+
+      .sugg-title {
+        font-size: 0.75rem;
+        -webkit-line-clamp: 2;
+        word-break: break-word;
+        overflow-wrap: break-word;
+        overflow: hidden;
+      }
+    }
+
     .coco2 {
       background: #0085c736 !important;
       outline: 5px solid #0085c736 !important;
@@ -473,7 +538,6 @@
 <header>
   <a class="logo" href=""><span>نـ</span>ور القرآن</a>
   <div class="nav-links">
-    <!-- استبدال <a href> بـ <div onclick> -->
     <div class="nav-btn" id="back-section" onclick="window.location.href=this.dataset.href" data-href="section.html?cat=%D8%A8%D8%B4%D8%B1%D8%A9">← القسم</div>
     <div class="nav-btn" onclick="window.location.href='index.html'" style="background:#177ccb;color:#fff;border-color:#0000;">الرئيسية</div>
   </div>
@@ -679,7 +743,6 @@
     // تحديث الواجهة
     catEl.textContent   = cat;
     idBadge.textContent = vid;
-    // تحديث data-href بدلاً من href
     backBtn.dataset.href = `section.html?cat=${encodeURIComponent(cat)}`;
     titleEl.textContent = '...';
 
@@ -779,7 +842,6 @@
   });
 
   // ===== بناء المقترحات =====
-  // استبدال <a href> بـ <div onclick> في المقترحات
   function buildSuggestions(vid, cat, catVideos) {
     const currentIdx   = catVideos.findIndex(v => v.id === vid);
     const prevVideo    = currentIdx > 0 ? catVideos[currentIdx - 1] : null;
@@ -837,7 +899,6 @@
     const videoId = params.get('id');
     const cat     = params.get('cat') || 'شائعة';
 
-    // تحديث data-href بدلاً من href
     backBtn.dataset.href = `section.html?cat=${encodeURIComponent(cat)}`;
 
     if (!videoId) {
