@@ -1,21 +1,59 @@
 document.addEventListener("DOMContentLoaded", () => {
   
-  // دالة لتمرير الصفحة إلى الأعلى
-  const scrollToTop = () => {
-    window.scrollTo({
+  // تخزين آخر عنصر تم النقر عليه في كل قائمة على حدة
+  const lastClickedItems = new Map(); // Key: menu element, Value: last clicked item element
+
+  // دالة للتمرير إلى عنصر معين مع مسافة 5px
+  const scrollToElement = (element, menu) => {
+    if (!element || !menu) return;
+
+    const elementTop = element.offsetTop;
+    const offset = 5;
+
+    menu.scrollTo({
+      top: elementTop - offset,
+      behavior: "smooth"
+    });
+  };
+
+  // دالة للتمرير إلى آخر عنصر تم النقر عليه في القائمة
+  const scrollToLastClickedItem = (menu) => {
+    const lastItem = lastClickedItems.get(menu);
+    if (lastItem && menu.contains(lastItem)) {
+      scrollToElement(lastItem, menu);
+    }
+  };
+
+  // دالة لإرجاع الاسكرول للأعلى
+  const resetMenuScroll = (menu) => {
+    menu.scrollTo({
       top: 0,
       behavior: "smooth"
     });
   };
 
-  // دالة لفتح القائمة مع التمرير للأعلى
+  // دالة لفتح القائمة مع التمرير
   const openMenuWithScroll = (menu) => {
     document.querySelectorAll(".menu").forEach(m => {
-      if (m !== menu) m.classList.remove("active");
+      if (m !== menu) {
+        m.classList.remove("active");
+        resetMenuScroll(m); // ✅ تصفير القوائم الأخرى
+      }
     });
 
     menu.classList.add("active");
-    scrollToTop();
+    
+    const lastItem = lastClickedItems.get(menu);
+    if (lastItem && menu.contains(lastItem)) {
+      setTimeout(() => {
+        scrollToLastClickedItem(menu);
+      }, 100);
+    } else {
+      menu.scrollTo({
+        top: 0,
+        behavior: "smooth"
+      });
+    }
   };
 
   // ربط أزرار التوجل
@@ -33,6 +71,7 @@ document.addEventListener("DOMContentLoaded", () => {
             openMenuWithScroll(menu);
           } else {
             menu.classList.remove("active");
+            resetMenuScroll(menu); // ✅ عند الإغلاق
           }
         }
       };
@@ -41,12 +80,41 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
+  // ربط أحداث عناصر القائمة
+  const bindMenuItemEvents = () => {
+    document.querySelectorAll(".menu").forEach(menu => {
+      const items = menu.querySelectorAll("*");
+      items.forEach(item => {
+        if (item.hasAttribute('data-item-bound')) return;
+        item.setAttribute('data-item-bound', 'true');
+
+        const handleItemClick = (e) => {
+          // تخزين آخر عنصر تم النقر عليه
+          lastClickedItems.set(menu, item);
+          
+          const parentMenu = item.closest('.menu');
+          if (parentMenu) {
+            parentMenu.classList.remove("active");
+            resetMenuScroll(parentMenu); // ✅ تصفير بعد الإغلاق
+          }
+        };
+
+        item.addEventListener("click", handleItemClick);
+        item.addEventListener("touchstart", (e) => {
+          e.stopPropagation();
+        });
+      });
+    });
+  };
+
   // مراقبة العناصر الجديدة
   const observeDynamicMenus = () => {
     bindToggleEvents();
+    bindMenuItemEvents();
 
     const observer = new MutationObserver(() => {
       bindToggleEvents();
+      bindMenuItemEvents();
     });
 
     observer.observe(document.body, {
@@ -63,6 +131,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!e.target.closest('.toggle') && !e.target.closest('.menu')) {
         document.querySelectorAll(".menu").forEach(menu => {
           menu.classList.remove("active");
+          resetMenuScroll(menu); // ✅ مهم
         });
       }
     });
@@ -73,36 +142,9 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!e.target.closest('.toggle') && !e.target.closest('.menu')) {
       document.querySelectorAll(".menu").forEach(menu => {
         menu.classList.remove("active");
+        resetMenuScroll(menu); // ✅ مهم
       });
     }
-  });
-
-  // ⭐ التعديل هنا: إغلاق القائمة عند الضغط على أي عنصر داخلها
-  const bindMenuItemEvents = () => {
-    document.querySelectorAll(".menu *").forEach(item => {
-      if (item.hasAttribute('data-item-bound')) return;
-      item.setAttribute('data-item-bound', 'true');
-
-      item.addEventListener("click", (e) => {
-        const menu = item.closest('.menu');
-        if (menu) menu.classList.remove("active");
-      });
-
-      item.addEventListener("touchstart", (e) => {
-        e.stopPropagation();
-      });
-    });
-  };
-
-  bindMenuItemEvents();
-
-  const itemObserver = new MutationObserver(() => {
-    bindMenuItemEvents();
-  });
-
-  itemObserver.observe(document.body, {
-    childList: true,
-    subtree: true
   });
 
 });
