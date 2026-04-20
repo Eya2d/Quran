@@ -302,7 +302,7 @@
   function buildCardHTML(v, i, delayOffset) {
     const delay = delayOffset !== undefined ? delayOffset : i * 40;
     return `
-    <div class="cards">
+    <div class="cards" tabindex="0">
       <div class="vid-card" id="${v.id}"
          style="animation-delay:${delay}ms"
          onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')}); navigateToWatch('${v.id}', '${encodeURIComponent(v.category)}')">
