@@ -314,6 +314,26 @@ imga img {
 }
 
 
+/* Stats */
+.stats {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    direction: ltr;
+    margin-top: 40px;
+}
+.stat {
+    user-select: none;
+    margin: 0 10px;
+    font-size: 20px;
+    width: 100px;
+}
+.stat p {
+    margin: 0;
+    font-weight: 700;
+}
+
+
 
 
 
