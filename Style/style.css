@@ -113,34 +113,6 @@ body .menu:focus-visible {
     color: #3e464c;
 }
 
-.x-btn {
-    position: relative;
-    z-index: 10;
-}
-.x-btn::before {
-    transition: ease 0.2s;
-    position: absolute;
-    z-index: -1;
-    content: '';
-    width: 70%;
-    height: 70%;
-    background-color: #0000;
-    border-radius: 25px;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-}
-.x-btn:hover::before {
-    width: 100%;
-    height: 100%;
-    background-color: #3e464c18;
-}
-.x-btn:active::before {
-    width: 96%;
-    height: 96%;
-    background-color: #3e464c18;
-}
-
 
 .dropdown {
   position: relative;
