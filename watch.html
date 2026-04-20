@@ -293,7 +293,6 @@
       line-height: 1.4;
       color: var(--text);
       margin-bottom: 10px;
-      /* منع تمدد العنوان الطويل */
       word-break: break-word;
       overflow-wrap: break-word;
     }
@@ -391,7 +390,6 @@
       transition: border-color .2s, transform .15s;
       animation: fadeUp .3s ease both;
       cursor: pointer;
-      /* منع تمدد الكرت بسبب العناوين الطويلة */
       min-width: 0;
     }
     @keyframes fadeUp {
@@ -413,7 +411,6 @@
 
     .sugg-info {
       flex: 1;
-      /* منع تجاوز المحتوى */
       min-width: 0;
       padding: 10px 0px 10px 12px;
       padding-bottom: 5px;
@@ -432,7 +429,6 @@
       -webkit-box-orient: vertical;
       overflow: hidden;
       color: black !important;
-      /* منع تمدد العنوان الطويل */
       word-break: break-word;
       overflow-wrap: break-word;
     }
@@ -468,32 +464,25 @@
     /* ===== MOBILE 360px ===== */
     @media (max-width: 600px) {
       header {
-        /* padding: 10px 12px; */
         gap: 10px;
       }
-      /* .logo { font-size: 1.2rem; } */
 
       main {
         grid-template-columns: 1fr;
-        /* padding: 12px; */
         gap: 20px;
       }
 
-      /* الفيديو يأخذ عرض الشاشة كاملاً بنسبة ثابتة */
       .player-wrap {
         width: 100%;
         padding-top: 56.25%;
-        /* border-radius: 10px; */
       }
 
-      /* عنوان الفيديو الرئيسي */
       .video-title {
         font-size: 1rem;
         word-break: break-word;
         overflow-wrap: break-word;
       }
 
-      /* المقترحات: صورة أصغر + عنوان لا يتمدد */
       .sugg-card {
         gap: 8px;
         min-width: 0;
@@ -725,6 +714,9 @@
   function loadVideo(vid, cat) {
     if (vid === currentVideoId) return;
 
+    // حفظ حالة وضع MP3 قبل إعادة الضبط
+    const wasInMp3Mode = document.body.classList.contains('xoox');
+
     currentVideoId = vid;
     currentCat     = cat;
 
@@ -737,7 +729,14 @@
     progressFill.style.width     = '0%';
     timeRemaining.textContent    = '0:00';
     showSpinner();
-    document.body.classList.remove('xoox');
+
+    // إبقاء وضع MP3 إن كان مفعّلاً، وإلا إزالته
+    if (!wasInMp3Mode) {
+      document.body.classList.remove('xoox');
+    }
+
+    // ===== سكرول للأعلى عند فتح فيديو جديد =====
+    window.scrollTo({ top: 0, behavior: 'smooth' });
 
     // تحديث URL بدون reload
     const newUrl = `watch.html?id=${encodeURIComponent(vid)}&cat=${encodeURIComponent(cat)}`;
