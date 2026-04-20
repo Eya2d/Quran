@@ -232,29 +232,20 @@
         gap: 12px;
       }
 
-      /* الكروت داخل .cards تأخذ العرض الكامل للعمود */
       .cards {
         display: contents;
       }
 
-      /* الصورة بنسبة ثابتة لضمان نفس الحجم على كلا الكرتين */
       .vid-card img {
         width: 100%;
         aspect-ratio: 16/9;
         object-fit: cover;
         display: block;
-        /* border-radius: 13px 13px 0 0; */
       }
 
       .vid-card {
         width: 100%;
       }
-    }
-
-    /* انيميشن التحميل التدريجي */
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
@@ -299,6 +290,9 @@
   // مؤشر تحميل أولي
   grid.innerHTML = '<p class="no-results" style="opacity:.5">جاري تحميل الفيديوهات...</p>';
 
+  // ===== متغير لتتبع وإلغاء أي batch تحميل جارٍ =====
+  let renderTimer = null;
+
   // ===== التنقل إلى صفحة المشاهدة =====
   function navigateToWatch(id, cat) {
     window.location.href = `watch.html?id=${id}&cat=${cat}`;
@@ -318,34 +312,36 @@
     </div>`;
   }
 
-  // ===== رسم الشبكة مع تحميل تدريجي 1 و1 (للعرض الأول فقط) =====
-  function renderGrid(list, progressive) {
+  // ===== رسم الشبكة مع تحميل تدريجي 1 و1 (دائمًا) =====
+  function renderGrid(list) {
+    // إلغاء أي batch سابق لم ينتهِ بعد
+    if (renderTimer !== null) {
+      clearTimeout(renderTimer);
+      renderTimer = null;
+    }
+
     if (!list.length) {
       grid.innerHTML = '<p class="no-results">لا توجد نتائج</p>';
       countEl.textContent = '';
       return;
     }
+
     countEl.textContent = `${list.length} فيديو`;
-
-    if (!progressive) {
-      // البحث أو إعادة الرسم: عرض فوري بدون تأخير
-      grid.innerHTML = list.map((v, i) => buildCardHTML(v, i)).join('');
-      return;
-    }
-
-    // التحميل التدريجي: 1 كرت كل 1 ملي ثانية (للمرة الأولى فقط)
     grid.innerHTML = '';
+
     const BATCH = 1;
     let index = 0;
 
     function appendBatch() {
       const chunk = list.slice(index, index + BATCH);
-      if (!chunk.length) return;
+      if (!chunk.length) {
+        renderTimer = null;
+        return;
+      }
 
       const fragment = document.createDocumentFragment();
       chunk.forEach((v, i) => {
         const wrapper = document.createElement('div');
-        // تأخير الأنيميشن داخل كل batch يبدأ من 0
         wrapper.innerHTML = buildCardHTML(v, i, i * 40);
         fragment.appendChild(wrapper.firstElementChild);
       });
@@ -354,7 +350,9 @@
       index += BATCH;
 
       if (index < list.length) {
-        setTimeout(appendBatch, 1); // 1 ملي ثانية بين كل batch
+        renderTimer = setTimeout(appendBatch, 1);
+      } else {
+        renderTimer = null;
       }
     }
 
@@ -371,22 +369,22 @@
     const q = sectionSearch.value.trim();
     if (q) {
       filtered = videos.filter(v => v.title.includes(q));
-      renderGrid(filtered, false); // البحث: بدون تحميل تدريجي
+      renderGrid(filtered);
     }
   }
 
-  // ===== البحث: عرض فوري بدون تحميل تدريجي =====
+  // ===== البحث: تحميل تدريجي مع إلغاء الـ batch السابق =====
   sectionSearch.addEventListener('input', () => {
     const q = sectionSearch.value.trim();
     filtered = q ? videos.filter(v => v.title.includes(q)) : [...videos];
-    renderGrid(filtered, false); // false = عرض فوري أثناء البحث
+    renderGrid(filtered);
   });
 
   // ===== تحميل البيانات عند فتح الصفحة (مرة واحدة فقط) =====
   getCategoryData(cat).then(data => {
     videos = data;
     filtered = [...videos];
-    renderGrid(videos, true); // true = تحميل تدريجي 1 و1
+    renderGrid(videos);
 
     // جلب العناوين الحقيقية
     enrichVideos(videos).then(enriched => {
