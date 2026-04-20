@@ -159,7 +159,14 @@
       gap: 18px;
     }
 
-    .cards {}
+    .cards {
+      transition: all .3s;
+      user-select: none;
+    }
+    .cards:active {
+      transition: all .1s;
+      transform: scale(0.97);
+    }
 
     .vid-card {
       position: relative;
