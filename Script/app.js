@@ -114,14 +114,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
 document.addEventListener("DOMContentLoaded", () => {
   const counters = document.querySelectorAll('.count');
-  
+
   const startCounting = (counter) => {
     const target = +counter.getAttribute('data-target');
     let count = 0;
-  
+
     const update = () => {
       const increment = target / 100;
-    
+
       if (count < target) {
         count += increment;
         counter.innerText = Math.floor(count);
@@ -130,10 +130,10 @@ document.addEventListener("DOMContentLoaded", () => {
         counter.innerText = target;
       }
     };
-  
+
     update();
   };
-  
+
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (entry.isIntersecting) {
@@ -144,8 +144,15 @@ document.addEventListener("DOMContentLoaded", () => {
   }, {
     threshold: 0.5
   });
-  
+
   counters.forEach(counter => {
     observer.observe(counter);
   });
+});
+
+
+document.addEventListener("contextmenu", function(e) {
+  if (e.target.tagName === "IMG") {
+    e.preventDefault();
+  }
 });
