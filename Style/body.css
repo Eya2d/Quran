@@ -30,6 +30,14 @@ img {
 button,a,input,select,.cooo {
     outline-color: rgb(21, 137, 245);
 }
+
+.cards:focus-visible {
+    outline: none;
+}
+.cards:focus-visible .vid-card {
+    border-color: #177ccb;
+    box-shadow: 0 10px 32px #177ccb47;
+}
 button {
     cursor: pointer;
     display: flex;
