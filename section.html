@@ -262,7 +262,7 @@
 </head>
 <body>
 
-<header>
+<header class="headerww">
   <a class="logo" href=""><span>نـ</span>ور القرآن</a>
   <div class="back-btn" onclick="window.location.href='index.html'">← الرئيسية</div>
 </header>
@@ -275,7 +275,7 @@
   </div>
 
   <div class="section-search-wrap">
-    <input type="search" id="section-search" placeholder="ابحث في هذا القسم..." autocomplete="off" />
+    <input type="search" id="section-search" class="voope" placeholder="ابحث في هذا القسم..." autocomplete="off" />
     <span class="search-icon"><ion-icon name="search-outline"></ion-icon></span>
   </div>
 
@@ -411,6 +411,13 @@
       updateTitlesInGrid(enriched);
     });
   });
+</script>
+
+
+<script>
+  if (localStorage.getItem("site-theme") === "dark-mode") {
+    document.documentElement.classList.add("dark-mode");
+  }
 </script>
 </body>
 </html>
