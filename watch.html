@@ -515,6 +515,17 @@
       outline: 5px solid #0085c736 !important;
     }
 
+    hert {
+      cursor: pointer;
+      transition: transform .2s;
+    }
+    hert:active {
+      transform: scale(0.85);
+    }
+    hert.fav ion-icon {
+      color: #e63946 !important;
+    }
+
     .xoox .player-wrap {
       background-color: #0000;
     }
@@ -860,11 +871,13 @@
       }
       suggList.innerHTML = list.map((v, i) => {
         const isCurrent = v.id === vid;
+        const favClass = isFavorite(v.id) ? ' fav' : '';
+        const favIcon = isFavorite(v.id) ? 'heart' : 'heart-outline';
         return `
         <div class="sugg-card${isCurrent ? ' coco2' : ''}"
            data-vid="${v.id}" data-cat="${encodeURIComponent(v.category)}"
            style="animation-delay:${i * 50}ms">
-           <time>Time</time>
+           <hert class="${favClass}" onclick="event.stopPropagation(); toggleFavHert(this, ${JSON.stringify(v).replace(/"/g,'&quot;')})"><ion-icon name="${favIcon}"></ion-icon></hert>
           <img class="sugg-thumb" src="${getYoutubeThumbnail(v.id)}" alt="${v.title || ''}" loading="lazy" />
           <div class="sugg-info">
             <div class="sugg-title" id="st-${v.id}">${v.title || ''}</div>
@@ -892,6 +905,19 @@
         if (el) el.textContent = v.title;
       });
     });
+  }
+
+  // ===== تبديل المفضلة من زر القلب =====
+  function toggleFavHert(btn, video) {
+    const added = toggleFavorite(video);
+    const iconEl = btn.querySelector('ion-icon');
+    if (added) {
+      iconEl.setAttribute('name', 'heart');
+      btn.classList.add('fav');
+    } else {
+      iconEl.setAttribute('name', 'heart-outline');
+      btn.classList.remove('fav');
+    }
   }
 
   // ===== التهيئة الأولى =====
