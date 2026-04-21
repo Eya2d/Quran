@@ -160,3 +160,71 @@ document.addEventListener("contextmenu", function(e) {
     e.preventDefault();
   }
 });
+
+
+
+
+
+
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  const body = document.body;
+  const toggleBtn = document.getElementById("themeToggle");
+  const icon = document.getElementById("themeIcon");
+
+  const STORAGE_KEY = "site-theme";
+
+  // ✅ تطبيق الوضع المحفوظ
+  const savedTheme = localStorage.getItem(STORAGE_KEY);
+
+  if (savedTheme === "dark-mode") {
+    body.classList.add("dark-mode");
+  }
+
+  // ✅ تحديث الأيقونة
+  const updateIcon = () => {
+    if (!icon) return;
+
+    if (body.classList.contains("dark-mode")) {
+      icon.setAttribute("name", "sunny-outline"); // شمس
+    } else {
+      icon.setAttribute("name", "moon-outline"); // قمر
+    }
+  };
+
+  updateIcon();
+
+  // ✅ أنيميشن
+  const animateIcon = () => {
+    if (!icon) return;
+
+    icon.classList.add("icon-pop");
+    setTimeout(() => {
+      icon.classList.remove("icon-pop");
+    }, 300);
+  };
+
+  // ✅ تبديل الوضع
+  const toggleTheme = () => {
+
+    if (body.classList.contains("dark-mode")) {
+      body.classList.remove("dark-mode");
+      localStorage.setItem(STORAGE_KEY, "light-mode");
+    } else {
+      body.classList.add("dark-mode");
+      localStorage.setItem(STORAGE_KEY, "dark-mode");
+    }
+
+    updateIcon();
+    animateIcon();
+  };
+
+  // ✅ تشغيل فقط لو الزر موجود
+  if (toggleBtn) {
+    toggleBtn.addEventListener("click", toggleTheme);
+  }
+
+});
