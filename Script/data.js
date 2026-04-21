@@ -45,15 +45,35 @@ function _loadRaw() {
   if (_rawLoaded) return Promise.resolve();
   if (_rawLoadingPromise) return _rawLoadingPromise;
 
+  // تأخير 1ms بعد تحميل الصفحة في صفحات المشاهدة والقسم والمفضلة
+  const isIndexPage = !location.pathname.includes('watch') &&
+                      !location.pathname.includes('section') &&
+                      !location.pathname.includes('favorites') &&
+                      !location.pathname.includes('Favorites');
+
+  const delay = (!isIndexPage && document.readyState !== 'complete') ? 1 : 0;
+
   _rawLoadingPromise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = 'Script/data-raw.js';
-    script.onload = () => {
-      _rawLoaded = true;
-      resolve();
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
+    function doLoad() {
+      const script = document.createElement('script');
+      script.src = 'Script/data-raw.js';
+      script.onload = () => {
+        _rawLoaded = true;
+        resolve();
+      };
+      script.onerror = reject;
+      document.head.appendChild(script);
+    }
+
+    if (delay > 0) {
+      if (document.readyState === 'complete') {
+        setTimeout(doLoad, 1);
+      } else {
+        window.addEventListener('load', () => setTimeout(doLoad, 1), { once: true });
+      }
+    } else {
+      doLoad();
+    }
   });
 
   return _rawLoadingPromise;
