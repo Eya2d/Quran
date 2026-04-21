@@ -20,7 +20,7 @@
     <!-- header -->
     <header>
       <div class="flexe">
-        <button class="Toggle x-btn" id=""><ion-icon name="heart-outline"></ion-icon> <xx></xx></button>
+        <button class="Toggle x-btn" id="favToggle" onclick="window.location.href='favorites.html'; clearFavoritesBadge();"><ion-icon name="heart-outline"></ion-icon> <xx style="display:none"></xx></button>
       </div>
       <div class="flexe">
         <button class="Toggle x-btn" id="themeToggle"><ion-icon id="themeIcon" name="moon-outline"></ion-icon></button>
@@ -168,6 +168,12 @@ window.addEventListener("load", () => {
   if (localStorage.getItem("site-theme") === "dark-mode") {
     document.documentElement.classList.add("dark-mode");
   }
+</script>
+<script>
+  // تحديث badge المفضلة عند تحميل الصفحة
+  document.addEventListener("DOMContentLoaded", () => {
+    updateFavBadge();
+  });
 </script>
 </body>
 </html>
