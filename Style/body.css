@@ -235,6 +235,9 @@ body.dark-mode .cate.active svg {
 body.dark-mode .sidebar-title::after {
     background: #717171;
 }
+body.dark-mode .sugg-cat {
+    color: #22688c !important;
+}
 
 /* body.dark-mode  {
     
