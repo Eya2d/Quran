@@ -163,10 +163,10 @@
       transition: all .3s;
       user-select: none;
     }
-    .cards:active {
+    /* .cards:active {
       transition: all .1s;
       transform: scale(0.97);
-    }
+    } */
 
     .vid-card {
       position: relative;
@@ -229,6 +229,21 @@
 
     .time-card {
       position: relative;
+    }
+
+    hert {
+      cursor: pointer;
+      transition: transform .2s;
+    }
+    hert:active {
+      transform: scale(0.85);
+    }
+    hert.fav ion-icon {
+      color: #e63946 !important;
+    }
+
+    #videos-grid hert {
+      margin: 10px;
     }
 
     /* ===== MOBILE: 2 كروت بجانب بعض بعرض 360 ===== */
@@ -312,6 +327,8 @@
   // ===== دالة بناء HTML لكرت واحد =====
   function buildCardHTML(v, i, delayOffset) {
     const delay = delayOffset !== undefined ? delayOffset : i * 40;
+    const favClass = isFavorite(v.id) ? ' fav' : '';
+    const favIcon = isFavorite(v.id) ? 'heart' : 'heart-outline';
     return `
     <div class="cards" tabindex="0">
       <div class="vid-card" id="${v.id}"
@@ -319,11 +336,24 @@
          onclick="addToWatchHistory(${JSON.stringify(v).replace(/"/g,'&quot;')}); navigateToWatch('${v.id}', '${encodeURIComponent(v.category)}')">
         <div class="time-card">
          <img src="${getYoutubeThumbnail(v.id)}" alt="${v.title}" loading="lazy" />
-         <time>Time</time>
+         <hert class="${favClass}" onclick="event.stopPropagation(); toggleFavHert(this, ${JSON.stringify(v).replace(/"/g,'&quot;')})"><ion-icon name="${favIcon}"></ion-icon></hert>
         </div>
         <div class="vid-card-title" id="title-${v.id}">${v.title}</div>
       </div>
     </div>`;
+  }
+
+  // ===== تبديل المفضلة من زر القلب =====
+  function toggleFavHert(btn, video) {
+    const added = toggleFavorite(video);
+    const iconEl = btn.querySelector('ion-icon');
+    if (added) {
+      iconEl.setAttribute('name', 'heart');
+      btn.classList.add('fav');
+    } else {
+      iconEl.setAttribute('name', 'heart-outline');
+      btn.classList.remove('fav');
+    }
   }
 
   // ===== رسم الشبكة مع تحميل تدريجي 1 و1 (دائمًا) =====
