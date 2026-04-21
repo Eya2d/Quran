@@ -109,7 +109,7 @@
       padding-top: 56.25%;
       border-radius: var(--radius);
       overflow: hidden;
-      background: #ecc79330;
+      background: #93bdec30;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -525,11 +525,11 @@
 </head>
 <body>
 
-<header>
+<header class="headerww">
   <a class="logo" href=""><span>نـ</span>ور القرآن</a>
   <div class="nav-links">
     <div class="nav-btn" id="back-section" onclick="window.location.href=this.dataset.href" data-href="section.html?cat=%D8%A8%D8%B4%D8%B1%D8%A9">← القسم</div>
-    <div class="nav-btn" onclick="window.location.href='index.html'" style="background:#177ccb;color:#fff;border-color:#0000;">الرئيسية</div>
+    <div class="nav-btn ocoe" onclick="window.location.href='index.html'" style="background:#177ccb;color:#fff;border-color:#0000;">الرئيسية</div>
   </div>
 </header>
 
@@ -936,5 +936,10 @@
   });
 </script>
 
+<script>
+  if (localStorage.getItem("site-theme") === "dark-mode") {
+    document.documentElement.classList.add("dark-mode");
+  }
+</script>
 </body>
 </html>
