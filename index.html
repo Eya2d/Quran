@@ -18,7 +18,12 @@
 </head>
 <body class="body">
     <!-- header -->
-    <header></header>
+    <header>
+      <div class="flexe"></div>
+      <div class="flexe">
+        <button class="Toggle x-btn" id="themeToggle"><ion-icon id="themeIcon" name="moon-outline"></ion-icon></button>
+      </div>
+    </header>
 
     <!-- decoment -->
     <div class="decoment">
@@ -156,5 +161,11 @@ window.addEventListener("load", () => {
     <script src="Script/app.js"></script>
     <script src="Script/myscript.js"></script>
     <script src="Script/script.js"></script>
+
+<script>
+  if (localStorage.getItem("site-theme") === "dark-mode") {
+    document.documentElement.classList.add("dark-mode");
+  }
+</script>
 </body>
 </html>
