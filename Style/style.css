@@ -27,7 +27,31 @@ a {
 }
 
 header {
-    height: 30px; /*64*/
+    height: 60px;
+    direction: ltr;
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+}
+.Toggle {
+    width: 40px;
+    height: 40px;
+    border: none;
+    background: rgba(255, 255, 255, 0);
+    border-radius: 30px;
+    font-size: 24px;
+    color: #3a3a44;
+}
+
+/* الأيقونة */
+#themeIcon {
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+/* أنيميشن الانبثاق */
+.icon-pop {
+  transform: scale(0.90) rotate(45deg);
+  opacity: 0.6;
 }
 
 .direction {
@@ -35,7 +59,7 @@ header {
 }
 
 .decoment {
-    padding-top: 30px !important;
+    padding-top: 0px !important;
     display: block;
     padding: 0 16px;
     width: max-content;
