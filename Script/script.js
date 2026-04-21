@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
     filterDiv.appendChild(div);
   });
 
-  // ===== localData — يُحمَّل lazy عند أول بحث =====
+  // ===== localData — يُحمَّل lazy عند أول تفاعل مع البحث =====
   let localData = null;
   let dataReady = false;
   let enrichDone = false;
@@ -66,6 +66,12 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     }
   }
+
+  // ===== PRE-LOAD عند أول لمس/focus لصندوق البحث =====
+  // يبدأ تحميل data-raw.js في الخلفية فور ما يلمس المستخدم الحقل
+  // بحلول أول حرف تكون البيانات جاهزة أو شبه جاهزة
+  searchInput.addEventListener('focus', () => ensureData(), { once: true });
+  searchInput.addEventListener('touchstart', () => ensureData(), { once: true });
 
   // ===== RENDER HISTORY =====
   // استبدال <a href> بـ <div onclick> في سجل المشاهدة
