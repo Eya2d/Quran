@@ -215,3 +215,68 @@ function getYoutubeThumbnail(id) {
   if (!cleanId) return "";
   return `https://img.youtube.com/vi/${cleanId}/mqdefault.jpg`;
 }
+
+// ===== FAVORITES =====
+const FAVORITES_KEY = "yt_favorites_v1";
+const FAVORITES_BADGE_KEY = "yt_favorites_new_count";
+
+function getFavorites() {
+  try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || "[]"); }
+  catch { return []; }
+}
+
+function isFavorite(id) {
+  const cleanId = cleanVideoId(id);
+  return getFavorites().some(v => v.id === cleanId);
+}
+
+function addToFavorites(video) {
+  if (!video.id) return;
+  const cleanId = cleanVideoId(video.id);
+  let favs = getFavorites();
+  if (favs.some(v => v.id === cleanId)) return;
+  favs.unshift({ ...video, id: cleanId, savedAt: Date.now() });
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
+  // زيادة عداد العناصر الجديدة غير المشاهدة
+  const current = parseInt(localStorage.getItem(FAVORITES_BADGE_KEY) || "0", 10);
+  localStorage.setItem(FAVORITES_BADGE_KEY, String(current + 1));
+  updateFavBadge();
+}
+
+function removeFromFavorites(id) {
+  const cleanId = cleanVideoId(id);
+  let favs = getFavorites().filter(v => v.id !== cleanId);
+  localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
+  // تقليل عداد العناصر الجديدة عند الحذف قبل فتح صفحة المفضلة
+  const current = parseInt(localStorage.getItem(FAVORITES_BADGE_KEY) || "0", 10);
+  if (current > 0) {
+    const updated = current - 1;
+    localStorage.setItem(FAVORITES_BADGE_KEY, String(updated));
+    updateFavBadge();
+  }
+}
+
+function toggleFavorite(video) {
+  const cleanId = cleanVideoId(video.id);
+  if (isFavorite(cleanId)) {
+    removeFromFavorites(cleanId);
+    return false;
+  } else {
+    addToFavorites(video);
+    return true;
+  }
+}
+
+function clearFavoritesBadge() {
+  localStorage.setItem(FAVORITES_BADGE_KEY, "0");
+  updateFavBadge();
+}
+
+function updateFavBadge() {
+  const badge = document.querySelector("header .Toggle xx");
+  if (!badge) return;
+  const count = parseInt(localStorage.getItem(FAVORITES_BADGE_KEY) || "0", 10);
+  // يظهر فارغاً بدون أي رقم — فقط كنقطة إشعار
+  badge.textContent = "";
+  badge.style.display = count > 0 ? "block" : "none";
+}
