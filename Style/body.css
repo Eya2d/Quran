@@ -77,18 +77,24 @@ button {
     background-color: #3e464c18;
 }
 
-time {
+hert {
     position: absolute;
     right: 0;
-    bottom: 0;
+    top: 0;
     margin: 4px;
-    font-size: 13px;
     color: rgb(255 255 255 / 83%);
     line-height: 1;
-    background: #00000069;
-    padding: 5px 7px;
-    border-radius: 10px;
-    display: none;
+    /* background: #00000069; */
+    width: 30px;
+    height: 30px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+}
+hert ion-icon {
+    filter: drop-shadow(0px 0px 2px black);
 }
 
 .flexe {
@@ -237,6 +243,14 @@ body.dark-mode .sidebar-title::after {
 }
 body.dark-mode .sugg-cat {
     color: #22688c !important;
+}
+body.dark-mode .hertff input:focus {
+  border-color: #e63946 !important;
+  box-shadow: 0 0 0 3px #e6394629 !important;
+}
+body.dark-mode .vid-card:hover {
+    border-color: #e63946;
+    box-shadow: 0 10px 32px #e6394647;
 }
 
 /* body.dark-mode  {
