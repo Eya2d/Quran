@@ -193,7 +193,7 @@ body.dark-mode .back-btn:hover, .nav-btn:hover {
     background: #ffffff17 !important;
 }
 body.dark-mode .ocoe {
-    background: #184f7b !important;
+    background: #0085c736 !important;
     border-color: #0000 !important;
 }
 body.dark-mode::after {
@@ -219,8 +219,17 @@ body.dark-mode .player3 {
     color: #dddddd !important;
 }
 body.dark-mode .player-mp3 {
-    background: #111 !important;
+    background: #212326 !important;
     box-shadow: 0px 1px 3px #070707 !important;
+}
+body.dark-mode .playe2 {
+    background: #fefefe21;
+}
+body.dark-mode .cate.active svg {
+    fill: rgba(255, 255, 255, 0.856) !important;
+}
+body.dark-mode .sidebar-title::after {
+    background: #717171;
 }
 
 /* body.dark-mode  {
