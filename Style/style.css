@@ -46,6 +46,19 @@ header {
     color: #3a3a44;
 }
 
+xx {
+    position: absolute;
+    padding: 5px;
+    border-radius: 10px;
+    background: #0081e7;
+    right: 0;
+    top: 0;
+    margin: 2px;
+}
+button {
+    position: relative;
+}
+
 /* الأيقونة */
 #themeIcon {
   transition: transform 0.3s ease, opacity 0.3s ease;
