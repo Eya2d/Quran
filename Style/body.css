@@ -123,7 +123,7 @@ body.dark-mode .menu div:hover {
     background: #a8b0b811;
 }
 body.dark-mode .menu.active {
-    box-shadow: rgb(17 19 20 / 21%) 0px 4px 14px;
+    box-shadow: rgb(17 19 20) 0px 4px 14px;
 }
 body.dark-mode .menu {
     background: #2c2c2e;
@@ -185,14 +185,18 @@ body.dark-mode .vid-card::before {
 body.dark-mode .vid-card {
     border: 1px solid #585858;
 }
-body.dark-mode .back-btn, .nav-btn {
+body.dark-mode .back-btn, body.dark-mode .nav-btn {
     border-color: #717171 !important;
 }
-body.dark-mode .back-btn:hover, .nav-btn:hover {
+body.dark-mode .back-btn:hover, body.dark-mode .nav-btn:hover {
     border-color: #717171 !important;
     background: #ffffff17 !important;
 }
 body.dark-mode .ocoe {
+    background: #0085c736 !important;
+    border-color: #0000 !important;
+}
+body.dark-mode .ocoe:hover {
     background: #0085c736 !important;
     border-color: #0000 !important;
 }
