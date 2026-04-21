@@ -151,7 +151,7 @@ body.dark-mode .x-btn:hover::before {
     background-color: #c4c4c418;
 }
 body.dark-mode .x-btn:active::before {
-    background-color: #c4c4c418;
+    background-color: #c4c4c418 !important;
 }
 body.dark-mode .coopp:active {
     background-color: #c4c4c418;
