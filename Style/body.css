@@ -244,13 +244,9 @@ body.dark-mode .sidebar-title::after {
 body.dark-mode .sugg-cat {
     color: #22688c !important;
 }
-body.dark-mode .hertff input:focus {
-  border-color: #e63946 !important;
-  box-shadow: 0 0 0 3px #e6394629 !important;
-}
 body.dark-mode .vid-card:hover {
-    border-color: #e63946;
-    box-shadow: 0 10px 32px #e6394647;
+    border-color: #177ccb;
+    box-shadow: 0 10px 32px #177ccb47;
 }
 
 /* body.dark-mode  {
