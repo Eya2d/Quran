@@ -1,40 +1,40 @@
 // ===== قائمة الأقسام =====
 const CATEGORIES = [
-  "تلاوات خاشعة",
-  "مشاري العفاسي",
-  "عبد الباسط عبد الصمد",
-  "محمد صديق المنشاوي",
-  "ماهر المعيقلي",
-  "سعد الغامدي",
-  "أحمد العجمي",
-  "عبد الرحمن السديس",
-  "فارس عباد",
-  "هاني الرفاعي",
-  "ياسر الدوسري",
-  "ناصر القطامي",
-  "إدريس أبكر",
-  "خالد الجليل",
-  "محمد أيوب",
-  "علي جابر",
-  "صلاح البدير",
-  "بندر بليلة",
-  "إسلام صبحي",
-  "أبو بكر الشاطري",
-  "عبد الله بصفر",
-  "محمود خليل الحصري",
-  "محمد جبريل",
-  "سعود الشريم",
-  "عبد الله عواد الجهني",
-  "محمد محمود الطبلاوي",
-  "إبراهيم الأخضر",
-  "عبد الرشيد صوفي",
-  "مصطفى إسماعيل",
-  "محمود علي البنا",
-  "علي الحذيفي",
-  "عبد الولي الأركاني",
-  "صالح بوخاطر",
-  "عبد العزيز الزهراني",
-  "محمد المحيسني",
+"تلاوات خاشعة",
+"مشاري العفاسي",
+"عبد الباسط عبد الصمد",
+"محمد صديق المنشاوي",
+"ماهر المعيقلي",
+"سعد الغامدي",
+"أحمد العجمي",
+"عبد الرحمن السديس",
+"فارس عباد",
+"هاني الرفاعي",
+"ياسر الدوسري",
+"ناصر القطامي",
+"إدريس أبكر",
+"خالد الجليل",
+"محمد أيوب",
+"علي جابر",
+"صلاح البدير",
+"بندر بليلة",
+"إسلام صبحي",
+"أبو بكر الشاطري",
+"عبد الله بصفر",
+"محمود خليل الحصري",
+"محمد جبريل",
+"سعود الشريم",
+"عبد الله عواد الجهني",
+"محمد محمود الطبلاوي",
+"إبراهيم الأخضر",
+"عبد الرشيد صوفي",
+"مصطفى إسماعيل",
+"محمود علي البنا",
+"علي الحذيفي",
+"عبد الولي الأركاني",
+"صالح بوخاطر",
+"عبد العزيز الزهراني",
+"محمد المحيسني",
 ];
 
 // ===== LAZY LOAD DATA_RAW =====
@@ -46,38 +46,33 @@ function _loadRaw() {
   if (_rawLoadingPromise) return _rawLoadingPromise;
 
   const path = location.pathname;
-  const isWatchPage     = path.includes('watch');
-  const isSectionPage   = path.includes('section');
-  const isFavoritesPage = path.includes('favorites') || path.includes('Favorites');
+  const isWatch    = path.includes('watch');
+  const isSection  = path.includes('section');
+  const isFavorites = path.includes('favorites') || path.includes('Favorites');
 
   _rawLoadingPromise = new Promise((resolve, reject) => {
     function doLoad() {
       const script = document.createElement('script');
       script.src = 'Script/data-raw.js';
-      script.onload = () => {
-        _rawLoaded = true;
-        resolve();
-      };
+      script.onload = () => { _rawLoaded = true; resolve(); };
       script.onerror = reject;
       document.head.appendChild(script);
     }
 
-    if (isWatchPage) {
-      // صفحة المشاهدة: تحميل فوري مع الصفحة بدون أي انتظار
-      if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', doLoad, { once: true });
-      } else {
-        doLoad();
-      }
-    } else if (isSectionPage || isFavoritesPage) {
-      // صفحة القسم والمفضلة: تحميل بعد 1ms من اكتمال تحميل الصفحة
+    if (isWatch) {
+      // ← تحميل فوري مع الصفحة بدون أي انتظار
+      doLoad();
+
+    } else if (isSection || isFavorites) {
+      // ← تأخير 1ms بعد اكتمال تحميل الصفحة
       if (document.readyState === 'complete') {
         setTimeout(doLoad, 1);
       } else {
         window.addEventListener('load', () => setTimeout(doLoad, 1), { once: true });
       }
+
     } else {
-      // باقي الصفحات (الرئيسية وغيرها): تحميل عند الطلب فقط
+      // ← الصفحة الرئيسية: تحميل عند الطلب فقط (lazy)
       doLoad();
     }
   });
