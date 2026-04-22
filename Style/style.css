@@ -379,6 +379,9 @@ imga img {
         height: 94%;
         background-color: #3e464c18;
     }
+    #history-grid .x-btn::before {
+        background-color: #0000;
+    }
     #history-grid .x-btn:hover::before {
         background-color: #0000;
         width: 70%;
