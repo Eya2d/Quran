@@ -248,6 +248,9 @@ body.dark-mode .vid-card:hover {
     border-color: #177ccb;
     box-shadow: 0 10px 32px #177ccb47;
 }
+body.dark-mode .menu :nth-child(2)::before {
+    background: #c3c3c31a;
+} 
 
 /* body.dark-mode  {
     
