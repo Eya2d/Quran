@@ -45,34 +45,33 @@ function _loadRaw() {
   if (_rawLoaded) return Promise.resolve();
   if (_rawLoadingPromise) return _rawLoadingPromise;
 
-  const path = location.pathname;
-  const isWatch    = path.includes('watch');
-  const isSection  = path.includes('section');
-  const isFavorites = path.includes('favorites') || path.includes('Favorites');
+  // صفحة المفضلة والقسم فقط = تأخير 1ms بعد تحميل الصفحة
+  // صفحة المشاهدة والرئيسية = تحميل فوري مع الصفحة
+  const isDelayedPage = location.pathname.includes('section') ||
+                        location.pathname.includes('favorites') ||
+                        location.pathname.includes('Favorites');
 
   _rawLoadingPromise = new Promise((resolve, reject) => {
     function doLoad() {
       const script = document.createElement('script');
       script.src = 'Script/data-raw.js';
-      script.onload = () => { _rawLoaded = true; resolve(); };
+      script.onload = () => {
+        _rawLoaded = true;
+        resolve();
+      };
       script.onerror = reject;
       document.head.appendChild(script);
     }
 
-    if (isWatch) {
-      // ← تحميل فوري مع الصفحة بدون أي انتظار
-      doLoad();
-
-    } else if (isSection || isFavorites) {
-      // ← تأخير 1ms بعد اكتمال تحميل الصفحة
+    if (isDelayedPage) {
+      // تأخير 1ms بعد اكتمال تحميل الصفحة
       if (document.readyState === 'complete') {
         setTimeout(doLoad, 1);
       } else {
         window.addEventListener('load', () => setTimeout(doLoad, 1), { once: true });
       }
-
     } else {
-      // ← الصفحة الرئيسية: تحميل عند الطلب فقط (lazy)
+      // تحميل فوري (الرئيسية + صفحة المشاهدة)
       doLoad();
     }
   });
