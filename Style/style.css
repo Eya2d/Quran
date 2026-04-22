@@ -381,6 +381,8 @@ imga img {
     }
     #history-grid .x-btn:hover::before {
         background-color: #0000;
+        width: 70%;
+        height: 70%;
     }
     #history-grid .x-btn:active::before {
         width: 100%;
