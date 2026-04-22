@@ -1,40 +1,40 @@
 // ===== قائمة الأقسام =====
 const CATEGORIES = [
-  "تلاوات خاشعة",
-  "مشاري العفاسي",
-  "عبد الباسط عبد الصمد",
-  "محمد صديق المنشاوي",
-  "ماهر المعيقلي",
-  "سعد الغامدي",
-  "أحمد العجمي",
-  "عبد الرحمن السديس",
-  "فارس عباد",
-  "هاني الرفاعي",
-  "ياسر الدوسري",
-  "ناصر القطامي",
-  "إدريس أبكر",
-  "خالد الجليل",
-  "محمد أيوب",
-  "علي جابر",
-  "صلاح البدير",
-  "بندر بليلة",
-  "إسلام صبحي",
-  "أبو بكر الشاطري",
-  "عبد الله بصفر",
-  "محمود خليل الحصري",
-  "محمد جبريل",
-  "سعود الشريم",
-  "عبد الله عواد الجهني",
-  "محمد محمود الطبلاوي",
-  "إبراهيم الأخضر",
-  "عبد الرشيد صوفي",
-  "مصطفى إسماعيل",
-  "محمود علي البنا",
-  "علي الحذيفي",
-  "عبد الولي الأركاني",
-  "صالح بوخاطر",
-  "عبد العزيز الزهراني",
-  "محمد المحيسني",
+"تلاوات خاشعة",
+"مشاري العفاسي",
+"عبد الباسط عبد الصمد",
+"محمد صديق المنشاوي",
+"ماهر المعيقلي",
+"سعد الغامدي",
+"أحمد العجمي",
+"عبد الرحمن السديس",
+"فارس عباد",
+"هاني الرفاعي",
+"ياسر الدوسري",
+"ناصر القطامي",
+"إدريس أبكر",
+"خالد الجليل",
+"محمد أيوب",
+"علي جابر",
+"صلاح البدير",
+"بندر بليلة",
+"إسلام صبحي",
+"أبو بكر الشاطري",
+"عبد الله بصفر",
+"محمود خليل الحصري",
+"محمد جبريل",
+"سعود الشريم",
+"عبد الله عواد الجهني",
+"محمد محمود الطبلاوي",
+"إبراهيم الأخضر",
+"عبد الرشيد صوفي",
+"مصطفى إسماعيل",
+"محمود علي البنا",
+"علي الحذيفي",
+"عبد الولي الأركاني",
+"صالح بوخاطر",
+"عبد العزيز الزهراني",
+"محمد المحيسني",
 ];
 
 // ===== LAZY LOAD DATA_RAW =====
@@ -45,10 +45,11 @@ function _loadRaw() {
   if (_rawLoaded) return Promise.resolve();
   if (_rawLoadingPromise) return _rawLoadingPromise;
 
-  const path = location.pathname;
-  const isWatch    = path.includes('watch');
-  const isSection  = path.includes('section');
-  const isFavorites = path.includes('favorites') || path.includes('Favorites');
+  // صفحة المفضلة والقسم فقط = تأخير 1ms بعد تحميل الصفحة
+  // صفحة المشاهدة والرئيسية = تحميل فوري مع الصفحة
+  const isDelayedPage = location.pathname.includes('section') ||
+                        location.pathname.includes('favorites') ||
+                        location.pathname.includes('Favorites');
 
   _rawLoadingPromise = new Promise((resolve, reject) => {
     function doLoad() {
@@ -62,18 +63,15 @@ function _loadRaw() {
       document.head.appendChild(script);
     }
 
-    if (isWatch) {
-      // صفحة المشاهدة: تحميل فوري مع الصفحة بدون انتظار
-      doLoad();
-    } else if (isSection || isFavorites) {
-      // صفحة القسم والمفضلة: تحميل بعد 1ms من اكتمال تحميل الصفحة
+    if (isDelayedPage) {
+      // تأخير 1ms بعد اكتمال تحميل الصفحة
       if (document.readyState === 'complete') {
         setTimeout(doLoad, 1);
       } else {
         window.addEventListener('load', () => setTimeout(doLoad, 1), { once: true });
       }
     } else {
-      // الصفحة الرئيسية وغيرها: تحميل عند الطلب فقط (lazy)
+      // تحميل فوري (الرئيسية + صفحة المشاهدة)
       doLoad();
     }
   });
@@ -298,18 +296,7 @@ function updateFavBadge() {
   const badge = document.querySelector("header .Toggle xx");
   if (!badge) return;
   const count = parseInt(localStorage.getItem(FAVORITES_BADGE_KEY) || "0", 10);
+  // يظهر فارغاً بدون أي رقم — فقط كنقطة إشعار
   badge.textContent = "";
   badge.style.display = count > 0 ? "block" : "none";
 }
-
-// ===== تشغيل التحميل المسبق في صفحات watch / section / favorites =====
-(function () {
-  const path = location.pathname;
-  const isWatch     = path.includes('watch');
-  const isSection   = path.includes('section');
-  const isFavorites = path.includes('favorites') || path.includes('Favorites');
-
-  if (isWatch || isSection || isFavorites) {
-    _loadRaw();
-  }
-})();
