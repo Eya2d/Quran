@@ -45,11 +45,14 @@ function _loadRaw() {
   if (_rawLoaded) return Promise.resolve();
   if (_rawLoadingPromise) return _rawLoadingPromise;
 
-  // صفحة المفضلة والقسم فقط = تأخير 1ms بعد تحميل الصفحة
-  // صفحة المشاهدة والرئيسية = تحميل فوري مع الصفحة
+  // صفحة المفضلة والقسم والرئيسية = تأخير 1ms بعد تحميل الصفحة
+  // صفحة المشاهدة فقط = تحميل فوري مع الصفحة
   const isDelayedPage = location.pathname.includes('section') ||
                         location.pathname.includes('favorites') ||
-                        location.pathname.includes('Favorites');
+                        location.pathname.includes('Favorites') ||
+                        location.pathname.endsWith('index.html') ||
+                        location.pathname.endsWith('/') ||
+                        location.pathname === '';
 
   _rawLoadingPromise = new Promise((resolve, reject) => {
     function doLoad() {
