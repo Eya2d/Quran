@@ -4162,5 +4162,6 @@ const DATA_RAW = {
     { id: "Mme9FrokTv4&list", category: "تلاوات خاشعة" },
     { id: "d2M5uJTiQ_c&list", category: "تلاوات خاشعة" },
     { id: "EwuSpIovyBk&list", category: "تلاوات خاشعة" },
+    { id: "OvvB3tNr5EI", category: "تلاوات خاشعة" },
   ]
 };
