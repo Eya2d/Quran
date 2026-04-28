@@ -214,7 +214,7 @@ body .menu:focus-visible {
     opacity: .6;
     transition: ease 0s;
 }
-.menu :nth-child(2)::before {
+.menu :nth-child(3)::before {
     position: absolute;
     content: '';
     left: 0;
