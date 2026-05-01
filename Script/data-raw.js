@@ -4279,6 +4279,7 @@ const DATA_RAW = {
     { id: "d2M5uJTiQ_c&list", category: "تلاوات خاشعة" },
     { id: "EwuSpIovyBk&list", category: "تلاوات خاشعة" },
     { id: "OvvB3tNr5EI", category: "تلاوات خاشعة" },
+    { id: "3yWZP97f2ig", category: "تلاوات خاشعة" },
   ],
   "كل القراء": [
     { id: "C3v5ScU6ufM", category: "كل القراء" },
