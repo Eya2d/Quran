@@ -65,6 +65,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (searchInput.value.trim()) doSearch(searchInput.value);
       });
     }
+
+    // إذا كان هناك بحث معلّق (كتب المستخدم أثناء التحميل) أعد تشغيله
+    if (_pendingSearchQ && searchInput.value.trim() === _pendingSearchQ) {
+      _pendingSearchQ = null;
+      doSearch(searchInput.value);
+      searchInput.focus();
+    }
   }
 
   // ===== PRE-LOAD عند أول لمس/focus لصندوق البحث =====
@@ -72,6 +79,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // بحلول أول حرف تكون البيانات جاهزة أو شبه جاهزة
   searchInput.addEventListener('focus', () => ensureData(), { once: true });
   searchInput.addEventListener('touchstart', () => ensureData(), { once: true });
+
+  // ===== متغير لتتبع انتظار البيانات أثناء الكتابة =====
+  let _pendingSearchQ = null;
 
   // ===== RENDER HISTORY =====
   function renderHistory() {
@@ -157,10 +167,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!dataReady) {
+      // أظهر div النتائج مع رسالة التحميل بدون أي blur/focus يسرق الكيبورد
       resultsDiv.classList.add('active');
       resultsGrid.innerHTML = '<p class="no-results direction" style="opacity:.5">جاري التحميل...</p>';
+      _pendingSearchQ = q;
       await ensureData();
+      // بعد اكتمال التحميل: تحقق أن المستخدم لم يغيّر النص
       if (searchInput.value.trim() !== q) return;
+      _pendingSearchQ = null;
+      // أعد focus للـ input بعد التحميل لضمان ظهور الكيبورد
+      searchInput.focus();
     }
 
     const pool = activeFilter === 'الكل' ? localData.الكل : (localData[activeFilter] || []);
