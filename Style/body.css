@@ -251,6 +251,22 @@ body.dark-mode .vid-card:hover {
 body.dark-mode .menu :nth-child(2)::before {
     background: #c3c3c31a;
 } 
+body.dark-mode .menu :nth-child(3)::before {
+    background: #a6a6a633;
+}
+body.dark-mode .install a {
+    box-shadow: 0 1px 4px 1px #00000030;
+}
+body.dark-mode #install-container {
+    background-color: #1f1d1dc7;
+    box-shadow: 0px 5px 14px #040404;
+}
+body.dark-mode  {
+    
+}
+body.dark-mode  {
+    
+}
 
 /* body.dark-mode  {
     
