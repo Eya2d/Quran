@@ -226,16 +226,21 @@ let hasMoved = false;
 let isDragging = false;
 let blockNextClick = false;
 
-container.addEventListener('touchstart', startDrag);
+let velocity = 0;
+let lastX = 0;
+let lastTime = 0;
+
+container.addEventListener('touchstart', startDrag, { passive: true });
 container.addEventListener('mousedown', startDrag);
 
-window.addEventListener('touchmove', moveDrag);
+window.addEventListener('touchmove', moveDrag, { passive: false });
 window.addEventListener('mousemove', moveDrag);
 
 window.addEventListener('touchend', endDrag);
 window.addEventListener('mouseup', endDrag);
 window.addEventListener('mouseleave', endDrag);
 
+// منع الضغط بعد السحب
 document.addEventListener('click', function (e) {
   const link = e.target.closest('.cooo.x-btn');
   if (!link) return;
@@ -258,15 +263,16 @@ function startDrag(e) {
 
   isTouchDevice = e.type === 'touchstart';
 
-  if (e.touches) {
-    startX = e.touches[0].pageX - container.offsetLeft;
-  } else {
-    startX = e.pageX - container.offsetLeft;
-    e.preventDefault();
-  }
+  const x = e.touches ? e.touches[0].pageX : e.pageX;
+
+  startX = x - container.offsetLeft;
+  lastX = x;
+  lastTime = performance.now();
 
   scrollLeft = container.scrollLeft;
   dragDirection = null;
+
+  velocity = 0;
 
   container.style.cursor = 'grabbing';
   document.body.style.userSelect = 'none';
@@ -277,16 +283,21 @@ function startDrag(e) {
 function moveDrag(e) {
   if (!isDown) return;
 
-  let currentX;
-  if (e.touches) {
-    currentX = e.touches[0].pageX - container.offsetLeft;
-  } else {
-    currentX = e.pageX - container.offsetLeft;
+  const x = e.touches ? e.touches[0].pageX : e.pageX;
+
+  const currentX = x - container.offsetLeft;
+  const walk = (currentX - startX);
+
+  // حساب السرعة (للتحسين في اللمس)
+  const now = performance.now();
+  const dt = now - lastTime;
+  if (dt > 0) {
+    velocity = (x - lastX) / dt;
+    lastTime = now;
+    lastX = x;
   }
 
-  const walk = (currentX - startX) * 1.2;
-
-  if (Math.abs(walk) > 5) {
+  if (Math.abs(walk) > 3) {
     hasMoved = true;
     isDragging = true;
   }
@@ -313,105 +324,88 @@ function endDrag(e) {
     blockNextClick = true;
   }
 
-  if (isTouchDevice || e.type === 'touchend') {
-    setTimeout(() => {
-      snapToClosest();
+  // تحسين Snap في اللمس والماوس
+  requestAnimationFrame(() => {
+    snapToClosestImproved();
+  });
 
-      setTimeout(() => {
-        hasMoved = false;
-        isDragging = false;
-      }, 300);
-    }, 10);
-  } else {
-    setTimeout(() => {
-      hasMoved = false;
-      isDragging = false;
-    }, 100);
-  }
+  setTimeout(() => {
+    hasMoved = false;
+    isDragging = false;
+  }, 150);
 }
 
 // =========================
-
-function snapToClosest() {
+// 🎯 SNAP محسّن جدًا (أدق نقطة مركز العنصر)
+function snapToClosestImproved() {
   const items = Array.from(container.querySelectorAll('.cooo.x-btn'));
-  if (items.length === 0) return;
-
-  const containerStyle = getComputedStyle(container);
-  const containerPaddingLeft = parseFloat(containerStyle.paddingLeft);
-  const containerPaddingRight = parseFloat(containerStyle.paddingRight);
+  if (!items.length) return;
 
   const containerRect = container.getBoundingClientRect();
-  const containerCenter = containerRect.left + (containerRect.width / 2);
+  const containerCenter = containerRect.left + containerRect.width / 2;
 
-  let targetItem = null;
+  let closestItem = null;
+  let closestDistance = Infinity;
 
-  if (dragDirection === 'left') {
-    let minLeftDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const distance = Math.abs(rect.left - (containerRect.left + containerPaddingLeft));
-      if (distance < minLeftDistance) {
-        minLeftDistance = distance;
-        targetItem = item;
-      }
-    });
-  } else if (dragDirection === 'right') {
-    let minRightDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const distance = Math.abs(rect.right - (containerRect.right - containerPaddingRight));
-      if (distance < minRightDistance) {
-        minRightDistance = distance;
-        targetItem = item;
-      }
-    });
-  } else {
-    let minCenterDistance = Infinity;
-    items.forEach(item => {
-      const rect = item.getBoundingClientRect();
-      const itemCenter = rect.left + (rect.width / 2);
-      const distance = Math.abs(itemCenter - containerCenter);
-      if (distance < minCenterDistance) {
-        minCenterDistance = distance;
-        targetItem = item;
-      }
-    });
-  }
+  for (const item of items) {
+    const rect = item.getBoundingClientRect();
+    const itemCenter = rect.left + rect.width / 2;
 
-  if (targetItem) {
-    const targetRect = targetItem.getBoundingClientRect();
-    const itemIndex = items.indexOf(targetItem);
-    const isFirst = itemIndex === 0;
-    const isLast = itemIndex === items.length - 1;
+    const distance = Math.abs(itemCenter - containerCenter);
 
-    let scrollOffset;
-
-    if (isFirst) {
-      scrollOffset = container.scrollLeft + (targetRect.left - containerRect.left) - containerPaddingLeft;
-    } else if (isLast) {
-      scrollOffset = container.scrollLeft + (targetRect.right - containerRect.right) + containerPaddingRight;
-    } else {
-      const targetCenter = targetRect.left + (targetRect.width / 2);
-      const containerCenterOffset = containerRect.left + (containerRect.width / 2);
-      scrollOffset = container.scrollLeft + (targetCenter - containerCenterOffset);
+    if (distance < closestDistance) {
+      closestDistance = distance;
+      closestItem = item;
     }
-
-    container.scrollTo({
-      left: scrollOffset,
-      behavior: 'smooth'
-    });
   }
+
+  if (!closestItem) return;
+
+  const rect = closestItem.getBoundingClientRect();
+  const itemCenter = rect.left + rect.width / 2;
+  const offset = itemCenter - containerCenter;
+
+  const targetScroll = container.scrollLeft + offset;
+
+  smoothScrollTo(container, targetScroll, 500);
 }
 
 // =========================
+// ⚡ حركة سلسة محسنة (بدون الاعتماد فقط على smooth)
+function smoothScrollTo(el, target, duration = 400) {
+  const start = el.scrollLeft;
+  const change = target - start;
+  const startTime = performance.now();
 
+  function animateScroll(currentTime) {
+    const elapsed = currentTime - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+
+    // easing قوي وسلس
+    const ease = 1 - Math.pow(1 - progress, 3);
+
+    el.scrollLeft = start + change * ease;
+
+    if (progress < 1) {
+      requestAnimationFrame(animateScroll);
+    }
+  }
+
+  requestAnimationFrame(animateScroll);
+}
+
+// =========================
+// تحديث الاتجاه أثناء scroll (لللمس)
 let lastScrollLeft = 0;
+
 container.addEventListener('scroll', () => {
   if (isDown && isTouchDevice) {
-    const currentScrollLeft = container.scrollLeft;
-    if (currentScrollLeft > lastScrollLeft) dragDirection = 'right';
-    else if (currentScrollLeft < lastScrollLeft) dragDirection = 'left';
-    lastScrollLeft = currentScrollLeft;
+    const current = container.scrollLeft;
+
+    if (current > lastScrollLeft) dragDirection = 'right';
+    else if (current < lastScrollLeft) dragDirection = 'left';
+
+    lastScrollLeft = current;
   }
 });
 
