@@ -240,16 +240,18 @@ window.addEventListener('touchend', endDrag);
 window.addEventListener('mouseup', endDrag);
 window.addEventListener('mouseleave', endDrag);
 
-// منع الضغط بعد السحب
+// =========================
+// ✅ إصلاح مشكلة double click
 document.addEventListener('click', function (e) {
   const link = e.target.closest('.cooo.x-btn');
   if (!link) return;
 
-  if (blockNextClick) {
-    e.preventDefault();
-    e.stopPropagation();
-    blockNextClick = false;
-  }
+  if (!blockNextClick) return;
+
+  blockNextClick = false;
+
+  e.preventDefault();
+  e.stopPropagation();
 }, true);
 
 // =========================
@@ -320,11 +322,18 @@ function endDrag(e) {
   container.style.cursor = 'grab';
   document.body.style.userSelect = '';
 
-  if (hasMoved || isDragging) {
+  // =========================
+  // ✅ منع click فقط إذا كان سحب حقيقي
+  if (hasMoved && Math.abs(scrollLeft - container.scrollLeft) > 5) {
     blockNextClick = true;
+
+    // ⏱️ مهم: إعادة التفعيل بسرعة لتجنب تعطيل الروابط
+    setTimeout(() => {
+      blockNextClick = false;
+    }, 200);
   }
 
-  // ✅ هنا التعديل المهم:
+  // =========================
   // Snap فقط في اللمس
   if (isTouchDevice) {
     requestAnimationFrame(() => {
@@ -339,7 +348,7 @@ function endDrag(e) {
 }
 
 // =========================
-// SNAP (بدون تغيير)
+// SNAP
 function snapToClosestImproved() {
   const items = Array.from(container.querySelectorAll('.cooo.x-btn'));
   if (!items.length) return;
