@@ -83,7 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // إظهار div النتائج بكلمة "جاري التحميل..."
     resultsDiv.classList.add('active');
-    resultsGrid.innerHTML = '<p class="no-results direction" style="opacity:.5">جاري التحميل...</p>';
+    resultsGrid.innerHTML = '<p class="no-results direction" style="opacity:.5">جاري تحميل البيانات...</p>';
 
     // تعطيل الخانة بصرياً أثناء التحميل
     searchInput.disabled = true;
