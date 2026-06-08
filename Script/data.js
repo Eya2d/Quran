@@ -47,15 +47,6 @@ function _loadRaw() {
   if (_rawLoaded) return Promise.resolve();
   if (_rawLoadingPromise) return _rawLoadingPromise;
 
-  // صفحة المفضلة والقسم والرئيسية = تأخير 1ms بعد تحميل الصفحة
-  // صفحة المشاهدة فقط = تحميل فوري مع الصفحة
-  const isDelayedPage = location.pathname.includes('section') ||
-                        location.pathname.includes('favorites') ||
-                        location.pathname.includes('Favorites') ||
-                        location.pathname.endsWith('index.html') ||
-                        location.pathname.endsWith('/') ||
-                        location.pathname === '';
-
   _rawLoadingPromise = new Promise((resolve, reject) => {
     function doLoad() {
       const script = document.createElement('script');
@@ -67,22 +58,30 @@ function _loadRaw() {
       script.onerror = reject;
       document.head.appendChild(script);
     }
-
-    if (isDelayedPage) {
-      // تأخير 1ms بعد اكتمال تحميل الصفحة
-      if (document.readyState === 'complete') {
-        setTimeout(doLoad, 1);
-      } else {
-        window.addEventListener('load', () => setTimeout(doLoad, 1), { once: true });
-      }
-    } else {
-      // تحميل فوري (الرئيسية + صفحة المشاهدة)
-      doLoad();
-    }
+    doLoad();
   });
 
   return _rawLoadingPromise;
 }
+
+// ===== PRE-LOAD التلقائي لصفحة index.html بعد 1ms من اكتمال التحميل =====
+(function () {
+  const isIndexPage = location.pathname.endsWith('index.html') ||
+                      location.pathname.endsWith('/') ||
+                      location.pathname === '';
+
+  if (!isIndexPage) return;
+
+  function triggerPreload() {
+    setTimeout(_loadRaw, 1);
+  }
+
+  if (document.readyState === 'complete') {
+    triggerPreload();
+  } else {
+    window.addEventListener('load', triggerPreload, { once: true });
+  }
+})();
 
 // ===== getCategoryData — القسم المطلوب فقط =====
 const _dataCache = {};
@@ -324,18 +323,3 @@ function updateFavBadge() {
   badge.textContent = "";
   badge.style.display = count > 0 ? "block" : "none";
 }
-
-// ===== تحميل data-raw.js تلقائياً في صفحة index بعد 1ms من تحميل الصفحة =====
-(function () {
-  const isIndexPage = location.pathname.endsWith('index.html') ||
-                      location.pathname.endsWith('/') ||
-                      location.pathname === '';
-
-  if (!isIndexPage) return;
-
-  if (document.readyState === 'complete') {
-    setTimeout(_loadRaw, 1);
-  } else {
-    window.addEventListener('load', () => setTimeout(_loadRaw, 1), { once: true });
-  }
-})();
