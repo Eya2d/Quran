@@ -157,6 +157,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (!dataReady) {
+      resultsDiv.classList.add('active');
       resultsGrid.innerHTML = '<p class="no-results direction" style="opacity:.5">جاري التحميل...</p>';
       await ensureData();
       if (searchInput.value.trim() !== q) return;
