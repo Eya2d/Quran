@@ -324,3 +324,18 @@ function updateFavBadge() {
   badge.textContent = "";
   badge.style.display = count > 0 ? "block" : "none";
 }
+
+// ===== تحميل data-raw.js تلقائياً في صفحة index بعد 1ms من تحميل الصفحة =====
+(function () {
+  const isIndexPage = location.pathname.endsWith('index.html') ||
+                      location.pathname.endsWith('/') ||
+                      location.pathname === '';
+
+  if (!isIndexPage) return;
+
+  if (document.readyState === 'complete') {
+    setTimeout(_loadRaw, 1);
+  } else {
+    window.addEventListener('load', () => setTimeout(_loadRaw, 1), { once: true });
+  }
+})();
