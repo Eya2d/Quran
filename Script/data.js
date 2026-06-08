@@ -216,11 +216,30 @@ function getWatchHistory() {
 
 function addToWatchHistory(video) {
   if (!video.id) return;
+  const cleanId = cleanVideoId(video.id);
+  // تحديث العنوان من الـ cache إن وُجد
+  const cache = getTitleCache();
+  const title = cache[cleanId] || video.title || cleanId;
   let h = getWatchHistory();
-  h = h.filter(v => v.id !== video.id);
-  h.unshift({ ...video, watchedAt: Date.now() });
+  h = h.filter(v => v.id !== cleanId);
+  h.unshift({ ...video, id: cleanId, title, watchedAt: Date.now() });
   h = h.slice(0, 5);
   localStorage.setItem("watchHistory", JSON.stringify(h));
+}
+
+// ===== تحديث عنوان فيديو موجود في watchHistory =====
+function updateWatchHistoryTitle(id, title) {
+  const cleanId = cleanVideoId(id);
+  let h = getWatchHistory();
+  let changed = false;
+  h = h.map(v => {
+    if (v.id === cleanId && v.title !== title) {
+      changed = true;
+      return { ...v, title };
+    }
+    return v;
+  });
+  if (changed) localStorage.setItem("watchHistory", JSON.stringify(h));
 }
 
 function timeAgo(ts) {
