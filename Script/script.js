@@ -288,9 +288,9 @@ function moveDrag(e) {
   const currentX = x - container.offsetLeft;
   const walk = (currentX - startX);
 
-  // حساب السرعة (للتحسين في اللمس)
   const now = performance.now();
   const dt = now - lastTime;
+
   if (dt > 0) {
     velocity = (x - lastX) / dt;
     lastTime = now;
@@ -324,10 +324,13 @@ function endDrag(e) {
     blockNextClick = true;
   }
 
-  // تحسين Snap في اللمس والماوس
-  requestAnimationFrame(() => {
-    snapToClosestImproved();
-  });
+  // ✅ هنا التعديل المهم:
+  // Snap فقط في اللمس
+  if (isTouchDevice) {
+    requestAnimationFrame(() => {
+      snapToClosestImproved();
+    });
+  }
 
   setTimeout(() => {
     hasMoved = false;
@@ -336,7 +339,7 @@ function endDrag(e) {
 }
 
 // =========================
-// 🎯 SNAP محسّن جدًا (أدق نقطة مركز العنصر)
+// SNAP (بدون تغيير)
 function snapToClosestImproved() {
   const items = Array.from(container.querySelectorAll('.cooo.x-btn'));
   if (!items.length) return;
@@ -363,15 +366,15 @@ function snapToClosestImproved() {
 
   const rect = closestItem.getBoundingClientRect();
   const itemCenter = rect.left + rect.width / 2;
-  const offset = itemCenter - containerCenter;
 
+  const offset = itemCenter - containerCenter;
   const targetScroll = container.scrollLeft + offset;
 
   smoothScrollTo(container, targetScroll, 500);
 }
 
 // =========================
-// ⚡ حركة سلسة محسنة (بدون الاعتماد فقط على smooth)
+
 function smoothScrollTo(el, target, duration = 400) {
   const start = el.scrollLeft;
   const change = target - start;
@@ -381,7 +384,6 @@ function smoothScrollTo(el, target, duration = 400) {
     const elapsed = currentTime - startTime;
     const progress = Math.min(elapsed / duration, 1);
 
-    // easing قوي وسلس
     const ease = 1 - Math.pow(1 - progress, 3);
 
     el.scrollLeft = start + change * ease;
@@ -395,7 +397,7 @@ function smoothScrollTo(el, target, duration = 400) {
 }
 
 // =========================
-// تحديث الاتجاه أثناء scroll (لللمس)
+
 let lastScrollLeft = 0;
 
 container.addEventListener('scroll', () => {
