@@ -74,27 +74,50 @@ document.addEventListener("DOMContentLoaded", () => {
   searchInput.addEventListener('touchstart', () => ensureData(), { once: true });
 
   // ===== RENDER HISTORY =====
-  // استبدال <a href> بـ <div onclick> في سجل المشاهدة
   function renderHistory() {
     const history = getWatchHistory();
     if (!history.length) {
       historyGrid.innerHTML = '<p class="empty-history">لم تشاهد أي فيديو بعد</p>';
       return;
     }
+
+    // أولاً: اعرض العناوين المتاحة (cache أو المخزّنة)
+    const cache = getTitleCache();
+    history.forEach(v => {
+      const cleanId = cleanVideoId(v.id);
+      if (cache[cleanId]) v.title = cache[cleanId];
+    });
+
     historyGrid.innerHTML = history.map(v => {
+      const cleanId = cleanVideoId(v.id);
       const safeV = JSON.stringify(v).replace(/"/g, '&quot;');
-      const thumb = getYoutubeThumbnail(v.id);
+      const thumb = getYoutubeThumbnail(cleanId);
       const cat   = encodeURIComponent(v.category);
       const ago   = timeAgo(v.watchedAt);
       return `
-        <div class="cooo x-btn" tabindex="0" onclick="addToWatchHistory(${safeV}); window.location.href='watch.html?id=${v.id}&cat=${cat}'">
+        <div class="cooo x-btn" tabindex="0" id="hist-${cleanId}" onclick="addToWatchHistory(${safeV}); window.location.href='watch.html?id=${cleanId}&cat=${cat}'">
           <imga><img src="${thumb}" alt="${v.title}" loading="lazy" /></imga>
           <div class="history-card-info">
-            <div class="history-card-title">${v.title}</div>
+            <div class="history-card-title" id="hist-title-${cleanId}">${v.title}</div>
             <span class="history-time">${ago}</span>
           </div>
         </div>`;
     }).join('');
+
+    // ثانياً: جلب العناوين الناقصة من oEmbed وتحديث الـ DOM
+    const missing = history.filter(v => !cache[cleanVideoId(v.id)]);
+    if (missing.length) {
+      enrichVideos(missing).then(enriched => {
+        enriched.forEach(v => {
+          const el = document.getElementById('hist-title-' + v.id);
+          if (el && v.title && v.title !== v.id) {
+            el.textContent = v.title;
+            // تحديث watchHistory بالعنوان الصحيح
+            updateWatchHistoryTitle(v.id, v.title);
+          }
+        });
+      });
+    }
   }
 
   // ===== CLEAR HISTORY =====
