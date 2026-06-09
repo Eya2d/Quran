@@ -255,7 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (id === "" || id === undefined) {
             data = {
                 title: document.title,
-                text: "شاهد هذه الصفحة",
+                // text: "شاهد هذه الصفحة",
                 url: location.href
             };
         } 
