@@ -249,17 +249,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const btn = e.target.closest("[data-share]");
         if (!btn || !navigator.share) return;
 
-        // منع التكرار السريع
         if (isSharing) return;
 
         const id = btn.dataset.share;
 
         let data;
 
-        if (id === "" || id === undefined) {
+        if (!id) {
             data = {
                 title: document.title,
-                text: "شاهد هذه الصفحة",
+                // text: "شاهد هذه الصفحة",
                 url: location.href
             };
         } else {
@@ -270,10 +269,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         isSharing = true;
 
-        // تأثير بصري (شفافية)
-        btn.style.opacity = "0.5";
+        // إضافة كلاس بدل inline style
+        btn.classList.add("sharing");
 
-        // تأخير 10ms قبل فتح المشاركة
         setTimeout(async () => {
             try {
                 await navigator.share(data);
@@ -281,8 +279,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 console.log(err);
             }
 
-            // إعادة الحالة
-            btn.style.opacity = "";
+            btn.classList.remove("sharing");
             isSharing = false;
 
         }, 30);
