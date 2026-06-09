@@ -286,3 +286,33 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
 });
+
+
+
+
+
+document.addEventListener("DOMContentLoaded", () => {
+
+  // منع Ctrl + عجلة الماوس
+  document.addEventListener("wheel", (e) => {
+    if (e.ctrlKey) e.preventDefault();
+  }, { passive: false });
+
+  // منع Ctrl + + أو Ctrl + -
+  document.addEventListener("keydown", (e) => {
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      (e.key === "+" || e.key === "-" || e.key === "=" || e.key === "0")
+    ) {
+      e.preventDefault();
+    }
+  });
+
+  // منع التكبير باللمس (pinch zoom)
+  document.addEventListener("touchmove", (e) => {
+    if (e.scale && e.scale !== 1) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+});
