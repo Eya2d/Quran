@@ -113,6 +113,9 @@ button {
     outline: none;
     font-family: 'Cairo', sans-serif;
 }
+.searsh input:disabled {
+    background-color: #0000 !important;
+}
 .searsh .flex {
     z-index: 5;
     background: white;
