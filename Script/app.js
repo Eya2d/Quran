@@ -285,7 +285,7 @@ document.addEventListener("DOMContentLoaded", () => {
             btn.style.opacity = "1";
             isSharing = false;
 
-        }, 10);
+        }, 30);
     });
 
 });
