@@ -293,35 +293,65 @@ document.addEventListener("DOMContentLoaded", () => {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  let lastTouchEnd = 0;
-
-  // منع الـ double tap zoom
-  document.addEventListener("touchend", (e) => {
-    const now = Date.now();
-    if (now - lastTouchEnd <= 300) {
+  /* =========================
+     1. منع Zoom بالكيبورد
+  ========================= */
+  document.addEventListener("keydown", (e) => {
+    if (
+      (e.ctrlKey || e.metaKey) &&
+      (
+        e.key === "+" ||
+        e.key === "-" ||
+        e.key === "=" ||
+        e.key === "0"
+      )
+    ) {
       e.preventDefault();
     }
-    lastTouchEnd = now;
-  }, { passive: false });
-
-  // منع pinch zoom (أفضل طريقة حديثة)
-  document.addEventListener("gesturestart", (e) => {
-    e.preventDefault();
   });
 
-  document.addEventListener("gesturechange", (e) => {
-    e.preventDefault();
-  });
-
-  document.addEventListener("gestureend", (e) => {
-    e.preventDefault();
-  });
-
-  // دعم لمس طبيعي بدون تأثير على السحب العادي
-  document.addEventListener("touchstart", (e) => {
-    if (e.touches && e.touches.length > 1) {
-      e.preventDefault(); // منع multi-touch zoom
+  /* =========================
+     2. منع Zoom بعجلة الماوس
+  ========================= */
+  document.addEventListener("wheel", (e) => {
+    if (e.ctrlKey) {
+      e.preventDefault();
     }
   }, { passive: false });
+
+  /* =========================
+     3. منع pinch zoom (Touch)
+  ========================= */
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches.length > 1) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  document.addEventListener("touchmove", (e) => {
+    if (e.scale && e.scale !== 1) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+
+  /* =========================
+     4. منع double tap zoom
+  ========================= */
+  let lastTouch = 0;
+
+  document.addEventListener("touchend", () => {
+    const now = Date.now();
+    if (now - lastTouch <= 300) {
+      event.preventDefault();
+    }
+    lastTouch = now;
+  }, { passive: false });
+
+  /* =========================
+     5. iOS / Safari gestures
+  ========================= */
+  ["gesturestart", "gesturechange", "gestureend"].forEach(evt => {
+    document.addEventListener(evt, (e) => e.preventDefault());
+  });
 
 });
