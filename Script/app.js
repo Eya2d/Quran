@@ -243,33 +243,49 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     };
 
+    let isSharing = false;
+
     document.addEventListener("click", async e => {
         const btn = e.target.closest("[data-share]");
         if (!btn || !navigator.share) return;
+
+        // منع التكرار السريع
+        if (isSharing) return;
 
         const id = btn.dataset.share;
 
         let data;
 
-        // إذا فارغ -> مشاركة الصفحة الحالية
         if (id === "" || id === undefined) {
             data = {
                 title: document.title,
-                // text: "شاهد هذه الصفحة",
+                text: "شاهد هذه الصفحة",
                 url: location.href
             };
-        } 
-        else {
+        } else {
             data = Share[id];
         }
 
         if (!data) return;
 
-        try {
-            await navigator.share(data);
-        } catch (err) {
-            console.log(err);
-        }
+        isSharing = true;
+
+        // تأثير بصري (شفافية)
+        btn.style.opacity = "0.5";
+
+        // تأخير 10ms قبل فتح المشاركة
+        setTimeout(async () => {
+            try {
+                await navigator.share(data);
+            } catch (err) {
+                console.log(err);
+            }
+
+            // إعادة الحالة
+            btn.style.opacity = "1";
+            isSharing = false;
+
+        }, 10);
     });
 
 });
