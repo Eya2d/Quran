@@ -361,6 +361,7 @@ imga img {
 .cccvv .menu {
     right: 0;
     transform-origin: right top;
+    right: -5px;
 }
 .cccvv .de-btn {
     width: 40px;
