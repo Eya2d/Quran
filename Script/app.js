@@ -228,3 +228,48 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
 });
+
+
+
+
+// ----------------------------------------------------------
+document.addEventListener("DOMContentLoaded", () => {
+
+    const Share = {
+        1: {
+            title: "تواصل",
+            text: "تواصل معنا",
+            url: "https://example.com/product"
+        }
+    };
+
+    document.addEventListener("click", async e => {
+        const btn = e.target.closest("[data-share]");
+        if (!btn || !navigator.share) return;
+
+        const id = btn.dataset.share;
+
+        let data;
+
+        // إذا فارغ -> مشاركة الصفحة الحالية
+        if (id === "" || id === undefined) {
+            data = {
+                title: document.title,
+                text: "شاهد هذه الصفحة",
+                url: location.href
+            };
+        } 
+        else {
+            data = Share[id];
+        }
+
+        if (!data) return;
+
+        try {
+            await navigator.share(data);
+        } catch (err) {
+            console.log(err);
+        }
+    });
+
+});
