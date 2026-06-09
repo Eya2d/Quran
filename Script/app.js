@@ -293,25 +293,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
 document.addEventListener("DOMContentLoaded", () => {
 
-  // منع Ctrl + عجلة الماوس
-  document.addEventListener("wheel", (e) => {
-    if (e.ctrlKey) e.preventDefault();
-  }, { passive: false });
+  let lastTouchEnd = 0;
 
-  // منع Ctrl + + أو Ctrl + -
-  document.addEventListener("keydown", (e) => {
-    if (
-      (e.ctrlKey || e.metaKey) &&
-      (e.key === "+" || e.key === "-" || e.key === "=" || e.key === "0")
-    ) {
+  // منع الـ double tap zoom
+  document.addEventListener("touchend", (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
       e.preventDefault();
     }
+    lastTouchEnd = now;
+  }, { passive: false });
+
+  // منع pinch zoom (أفضل طريقة حديثة)
+  document.addEventListener("gesturestart", (e) => {
+    e.preventDefault();
   });
 
-  // منع التكبير باللمس (pinch zoom)
-  document.addEventListener("touchmove", (e) => {
-    if (e.scale && e.scale !== 1) {
-      e.preventDefault();
+  document.addEventListener("gesturechange", (e) => {
+    e.preventDefault();
+  });
+
+  document.addEventListener("gestureend", (e) => {
+    e.preventDefault();
+  });
+
+  // دعم لمس طبيعي بدون تأثير على السحب العادي
+  document.addEventListener("touchstart", (e) => {
+    if (e.touches && e.touches.length > 1) {
+      e.preventDefault(); // منع multi-touch zoom
     }
   }, { passive: false });
 
