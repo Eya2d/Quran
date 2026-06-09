@@ -39,60 +39,16 @@ const CATEGORIES = [
 "حسن صالح",
 ];
 
-// ===== خريطة ملفات الأقسام =====
-const DATA_CHUNK_MAP = {
-  "مشاري العفاسي":          "Datat/data-afasi.js",
-  "عبد الباسط عبد الصمد":  "Datat/data-abdulbasit.js",
-  "محمد صديق المنشاوي":     "Datat/data-minshawi.js",
-  "ماهر المعيقلي":           "Datat/data-muaiqly.js",
-  "سعد الغامدي":             "Datat/data-ghamdi.js",
-  "أحمد العجمي":             "Datat/data-ajami.js",
-  "عبد الرحمن السديس":      "Datat/data-sudais.js",
-  "فارس عباد":               "Datat/data-faris.js",
-  "هاني الرفاعي":            "Datat/data-rifai.js",
-  "ياسر الدوسري":            "Datat/data-dosari.js",
-  "ناصر القطامي":            "Datat/data-qatami.js",
-  "إدريس أبكر":              "Datat/data-abkar.js",
-  "خالد الجليل":             "Datat/data-jalil.js",
-  "محمد أيوب":               "Datat/data-ayoub.js",
-  "علي جابر":                "Datat/data-jaber.js",
-  "صلاح البدير":             "Datat/data-budayr.js",
-  "بندر بليلة":              "Datat/data-blayla.js",
-  "إسلام صبحي":              "Datat/data-sobhi.js",
-  "أبو بكر الشاطري":         "Datat/data-shatri.js",
-  "عبد الله بصفر":           "Datat/data-basfar.js",
-  "محمود خليل الحصري":       "Datat/data-husary.js",
-  "محمد جبريل":              "Datat/data-jibreel.js",
-  "سعود الشريم":             "Datat/data-shuraim.js",
-  "عبد الله عواد الجهني":    "Datat/data-juhani.js",
-  "محمد محمود الطبلاوي":     "Datat/data-tablawi.js",
-  "إبراهيم الأخضر":          "Datat/data-akhdar.js",
-  "عبد الرشيد صوفي":         "Datat/data-sufi.js",
-  "مصطفى إسماعيل":           "Datat/data-ismail.js",
-  "محمود علي البنا":          "Datat/data-banna.js",
-  "علي الحذيفي":             "Datat/data-hudhaifi.js",
-  "عبد الولي الأركاني":      "Datat/data-arkani.js",
-  "صالح بوخاطر":             "Datat/data-bukhatar.js",
-  "عبد العزيز الزهراني":     "Datat/data-zahrani.js",
-  "محمد المحيسني":            "Datat/data-muhaisini.js",
-  "حسن صالح":               "Datat/data-hassan.js",
-  "تلاوات خاشعة":            "Datat/data-khashia.js",
-  "كل القراء":               "Datat/data-allreaders.js",
-};
-
-// ===== DATA_RAW الرئيسي (للصفحة الرئيسية فقط) =====
+// ===== LAZY LOAD DATA_RAW =====
 let _rawLoaded = false;
 let _rawLoadingPromise = null;
-let MAIN_DATA_RAW = null;
 
-// ===== تخزين بيانات الأقسام المحملة =====
-const _chunksCache = {};
-
-// ===== تحميل DATA_RAW الرئيسي (لـ index.html فقط) =====
-function _loadMainRaw() {
+function _loadRaw() {
   if (_rawLoaded) return Promise.resolve();
   if (_rawLoadingPromise) return _rawLoadingPromise;
 
+  // صفحة المفضلة والقسم والرئيسية = تأخير 1ms بعد تحميل الصفحة
+  // صفحة المشاهدة فقط = تحميل فوري مع الصفحة
   const isDelayedPage = location.pathname.includes('section') ||
                         location.pathname.includes('favorites') ||
                         location.pathname.includes('Favorites') ||
@@ -106,7 +62,6 @@ function _loadMainRaw() {
       script.src = 'Script/data-raw.js';
       script.onload = () => {
         _rawLoaded = true;
-        MAIN_DATA_RAW = window.DATA_RAW;
         resolve();
       };
       script.onerror = reject;
@@ -114,12 +69,14 @@ function _loadMainRaw() {
     }
 
     if (isDelayedPage) {
+      // تأخير 1ms بعد اكتمال تحميل الصفحة
       if (document.readyState === 'complete') {
         setTimeout(doLoad, 1);
       } else {
         window.addEventListener('load', () => setTimeout(doLoad, 1), { once: true });
       }
     } else {
+      // تحميل فوري (الرئيسية + صفحة المشاهدة)
       doLoad();
     }
   });
@@ -127,128 +84,53 @@ function _loadMainRaw() {
   return _rawLoadingPromise;
 }
 
-// ===== تحميل ملف قسم فردي =====
-async function _loadChunk(cat) {
-  if (_chunksCache[cat]) return _chunksCache[cat];
-  
-  const chunkPath = DATA_CHUNK_MAP[cat];
-  if (!chunkPath) {
-    console.warn(`لا يوجد ملف مخصص للقسم: ${cat}`);
-    return null;
-  }
-
-  return new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = chunkPath;
-    script.onload = () => {
-      // المتغير المتوقع في الملفات هو DATA_CHUNK
-      if (window.DATA_CHUNK) {
-        _chunksCache[cat] = window.DATA_CHUNK;
-        window.DATA_CHUNK = null; // تنظيف
-        resolve(_chunksCache[cat]);
-      } else {
-        reject(new Error(`الملف ${chunkPath} لم يُصدر DATA_CHUNK`));
-      }
-    };
-    script.onerror = () => reject(new Error(`فشل تحميل ${chunkPath}`));
-    document.head.appendChild(script);
-  });
-}
-
-// ===== الحصول على بيانات قسم معين =====
+// ===== getCategoryData — القسم المطلوب فقط =====
 const _dataCache = {};
 
 async function getCategoryData(cat) {
-  // التحقق من وجود البيانات في الكاش
   if (_dataCache[cat]) return _dataCache[cat];
 
-  // صفحة المشاهدة أو section أو favorites: تحميل الملف المخصص
-  const isWatchPage = location.pathname.includes('watch.html');
-  const isSectionPage = location.pathname.includes('section.html');
-  const isFavoritesPage = location.pathname.includes('favorites.html');
-  
-  // الأقسام الخاصة (كل القراء، تلاوات خاشعة) تأتي من main أو مخصصة
-  const isSpecialCat = cat === 'كل القراء' || cat === 'تلاوات خاشعة';
+  // تحميل data-raw.js إن لم يكن محملاً
+  await _loadRaw();
 
-  // حالة 1: صفحة رئيسية (index) - نستخدم DATA_RAW الرئيسي
-  if (!isWatchPage && !isSectionPage && !isFavoritesPage) {
-    await _loadMainRaw();
-    if (!MAIN_DATA_RAW) return [];
-    
-    if (cat === 'كل القراء') {
-      const all = CATEGORIES.flatMap(c =>
-        (MAIN_DATA_RAW[c] || [])
-          .map(v => {
-            const id = cleanVideoId(v.id);
-            return id ? { id, category: c, title: getTitleCache()[id] || "جاري التحميل..." } : null;
-          })
-          .filter(Boolean)
-      );
-      _dataCache['كل القراء'] = all;
-      return all;
-    }
-    
-    const raw = MAIN_DATA_RAW[cat] || [];
-    const result = raw
-      .map(v => {
-        const id = cleanVideoId(v.id);
-        return id ? { id, category: cat, title: getTitleCache()[id] || "جاري التحميل..." } : null;
-      })
-      .filter(Boolean);
-    _dataCache[cat] = result;
-    return result;
+  // استخراج القسم المطلوب فقط من DATA_RAW
+  const cache = getTitleCache();
+
+  if (cat === 'الكل') {
+    const all = CATEGORIES.flatMap(c =>
+      (DATA_RAW[c] || [])
+        .map(v => {
+          const id = cleanVideoId(v.id);
+          return id ? { id, category: c, title: cache[id] || "جاري التحميل..." } : null;
+        })
+        .filter(Boolean)
+    );
+    _dataCache['الكل'] = all;
+
+    // تحرير DATA_RAW من الذاكرة بعد البناء
+    _freeRaw();
+    return all;
   }
-  
-  // حالة 2: صفحات section, favorites, watch - نستخدم الملفات المجزأة
-  // للأقسام الخاصة نستخدم main raw
-  if (isSpecialCat) {
-    await _loadMainRaw();
-    if (!MAIN_DATA_RAW) return [];
-    
-    if (cat === 'كل القراء') {
-      const all = CATEGORIES.flatMap(c =>
-        (MAIN_DATA_RAW[c] || [])
-          .map(v => {
-            const id = cleanVideoId(v.id);
-            return id ? { id, category: c, title: getTitleCache()[id] || "جاري التحميل..." } : null;
-          })
-          .filter(Boolean)
-      );
-      _dataCache['كل القراء'] = all;
-      return all;
-    }
-    
-    const raw = MAIN_DATA_RAW[cat] || [];
-    const result = raw
-      .map(v => {
-        const id = cleanVideoId(v.id);
-        return id ? { id, category: cat, title: getTitleCache()[id] || "جاري التحميل..." } : null;
-      })
-      .filter(Boolean);
-    _dataCache[cat] = result;
-    return result;
-  }
-  
-  // للأقسام العادية: تحميل الملف المخصص
-  try {
-    const chunkData = await _loadChunk(cat);
-    if (!chunkData || !chunkData.videos) {
-      console.warn(`لا توجد بيانات للقسم: ${cat}`);
-      return [];
-    }
-    
-    const result = chunkData.videos
-      .map(v => {
-        const id = cleanVideoId(v.id);
-        return id ? { id, category: cat, title: getTitleCache()[id] || v.title || "جاري التحميل..." } : null;
-      })
-      .filter(Boolean);
-    
-    _dataCache[cat] = result;
-    return result;
-  } catch (err) {
-    console.error(`خطأ في تحميل القسم ${cat}:`, err);
-    return [];
+
+  const raw = DATA_RAW[cat] || [];
+  const result = raw
+    .map(v => {
+      const id = cleanVideoId(v.id);
+      return id ? { id, category: cat, title: cache[id] || "جاري التحميل..." } : null;
+    })
+    .filter(Boolean);
+
+  _dataCache[cat] = result;
+
+  // تحرير DATA_RAW من الذاكرة بعد استخراج القسم
+  _freeRaw();
+  return result;
+}
+
+// إزالة DATA_RAW من الذاكرة بعد الاستخراج
+function _freeRaw() {
+  if (typeof DATA_RAW !== 'undefined') {
+    try { window.DATA_RAW = null; } catch(_) {}
   }
 }
 
@@ -335,6 +217,7 @@ function getWatchHistory() {
 function addToWatchHistory(video) {
   if (!video.id) return;
   const cleanId = cleanVideoId(video.id);
+  // تحديث العنوان من الـ cache إن وُجد
   const cache = getTitleCache();
   const title = cache[cleanId] || video.title || cleanId;
   let h = getWatchHistory();
@@ -344,6 +227,7 @@ function addToWatchHistory(video) {
   localStorage.setItem("watchHistory", JSON.stringify(h));
 }
 
+// ===== تحديث عنوان فيديو موجود في watchHistory =====
 function updateWatchHistoryTitle(id, title) {
   const cleanId = cleanVideoId(id);
   let h = getWatchHistory();
@@ -397,6 +281,7 @@ function addToFavorites(video) {
   if (favs.some(v => v.id === cleanId)) return;
   favs.unshift({ ...video, id: cleanId, savedAt: Date.now() });
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
+  // زيادة عداد العناصر الجديدة غير المشاهدة
   const current = parseInt(localStorage.getItem(FAVORITES_BADGE_KEY) || "0", 10);
   localStorage.setItem(FAVORITES_BADGE_KEY, String(current + 1));
   updateFavBadge();
@@ -406,6 +291,7 @@ function removeFromFavorites(id) {
   const cleanId = cleanVideoId(id);
   let favs = getFavorites().filter(v => v.id !== cleanId);
   localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs));
+  // تقليل عداد العناصر الجديدة عند الحذف قبل فتح صفحة المفضلة
   const current = parseInt(localStorage.getItem(FAVORITES_BADGE_KEY) || "0", 10);
   if (current > 0) {
     const updated = current - 1;
@@ -434,6 +320,7 @@ function updateFavBadge() {
   const badge = document.querySelector("header .Toggle xx");
   if (!badge) return;
   const count = parseInt(localStorage.getItem(FAVORITES_BADGE_KEY) || "0", 10);
+  // يظهر فارغاً بدون أي رقم — فقط كنقطة إشعار
   badge.textContent = "";
   badge.style.display = count > 0 ? "block" : "none";
 }
