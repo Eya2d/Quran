@@ -369,7 +369,7 @@ imga img {
     font-size: 24px;
 }
 .cccvv .menu :nth-child(3)::before {
-    background: #0000;
+    background: #0000 !important;
 }
 
 
