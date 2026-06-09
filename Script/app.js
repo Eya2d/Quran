@@ -282,7 +282,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // إعادة الحالة
-            btn.style.opacity = "1";
+            btn.style.opacity = "";
             isSharing = false;
 
         }, 30);
