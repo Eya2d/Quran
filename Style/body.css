@@ -27,8 +27,11 @@ img {
     -webkit-user-drag: none;
     display: block;
 }
-button,a,input,select,.cooo {
+:focus-visible {
+    outline: 2px;
+    /* box-shadow: 0 0 0 1px rgb(21, 137, 245) inset; */
     outline-color: rgb(21, 137, 245);
+    outline-style: double;
 }
 
 .cards:focus-visible {
@@ -253,6 +256,12 @@ body.dark-mode .menu :nth-child(2)::before {
 } 
 body.dark-mode .menu :nth-child(3)::before {
     background: #a6a6a633;
+}
+body.dark-mode .hr-color {
+    background: #a6a6a633 !important;
+}
+body.dark-mode #results-grid {
+    box-shadow: 0px -1px 0px #a6a6a633;
 }
 body.dark-mode .install a {
     box-shadow: 0 1px 4px 1px #00000030;
