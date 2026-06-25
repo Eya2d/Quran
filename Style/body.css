@@ -229,7 +229,7 @@ body.dark-mode .vid-card:hover {
     box-shadow: 0 10px 32px #177ccb47;
 }
 body.dark-mode .player3 {
-    color: #dddddd !important;
+    fill: #dddddd !important;
 }
 body.dark-mode .player-mp3 {
     background: #212326 !important;
