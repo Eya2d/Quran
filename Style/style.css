@@ -194,6 +194,12 @@ body .menu:focus-visible {
     box-shadow: rgb(69 84 99 / 16%) 0px 4px 14px;
     transform: scale(1);
 }
+.menu hr {
+    border: none;
+    height: 1px;
+    margin: 0 8px;
+    background: #3a3a441a;
+}
 
 /* العناصر */
 .menu div {
