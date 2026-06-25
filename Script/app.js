@@ -51,30 +51,39 @@ document.addEventListener("DOMContentLoaded", () => {
   // إنشاء الزر
   const btn = document.createElement("button");
   btn.id = "scrollTopBtn";
-  btn.innerHTML = '<ion-icon name="chevron-up-outline"></ion-icon>';
+
+  btn.innerHTML = `
+    <svg class="progress-ring" width="48" height="48">
+      <circle class="progress-bg" cx="24" cy="24" r="22"></circle>
+      <circle class="progress-bar" cx="24" cy="24" r="22"></circle>
+    </svg>
+    <ion-icon name="chevron-up-outline"></ion-icon>
+  `;
+
   document.body.appendChild(btn);
 
-  // إنشاء الستايل داخل السكربت
+  // إنشاء الستايل
   const style = document.createElement("style");
   style.innerHTML = `
     #scrollTopBtn {
       position: fixed;
       bottom: 40px;
       right: 40px;
-      background: #fff;
-      color: rgb(21, 137, 245);
-      border: solid 1px #177ccb33;
       width: 48px;
       height: 48px;
+      border: none;
+      background: #fff;
       border-radius: 50%;
       cursor: pointer;
-      font-size: 24px;
       box-shadow: 0 5px 15px rgb(9 18 46 / 20%);
       opacity: 0;
       transform: translateX(20px);
       pointer-events: none;
-      transition: all 0.3s ease;
+      transition: all .3s ease;
       z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     #scrollTopBtn.show {
@@ -82,22 +91,73 @@ document.addEventListener("DOMContentLoaded", () => {
       transform: translateX(0);
       pointer-events: auto;
     }
+
+    #scrollTopBtn ion-icon {
+      font-size: 24px;
+      color: rgb(21, 137, 245);
+      position: relative;
+      z-index: 2;
+    }
+
+    .progress-ring {
+      position: absolute;
+      top: 0;
+      left: 0;
+      transform: rotate(-90deg);
+    }
+
+    .progress-bg {
+      fill: none;
+      stroke: #e5e7eb;
+      stroke-width: 3;
+    }
+
+    .progress-bar {
+      fill: none;
+      stroke: rgb(21, 137, 245);
+      stroke-width: 3;
+      stroke-linecap: round;
+      stroke-dasharray: 163.36;
+      stroke-dashoffset: 163.36;
+      transition: stroke-dashoffset .1s linear;
+    }
   `;
   document.head.appendChild(style);
 
-  // إظهار / إخفاء الزر
-  window.addEventListener("scroll", () => {
-    if (window.scrollY > 300) {
+  const progressBar = btn.querySelector(".progress-bar");
+  const radius = 26;
+  const circumference = 2 * Math.PI * radius;
+
+  function updateProgress() {
+    const scrollTop = window.scrollY;
+    const docHeight =
+      document.documentElement.scrollHeight - window.innerHeight;
+
+    const progress = docHeight > 0
+      ? Math.min(scrollTop / docHeight, 1)
+      : 0;
+
+    const offset = circumference - (progress * circumference);
+
+    progressBar.style.strokeDashoffset = offset;
+
+    if (scrollTop > 300) {
       btn.classList.add("show");
     } else {
       btn.classList.remove("show");
     }
-  });
+  }
 
-  // عند الضغط
+  window.addEventListener("scroll", updateProgress);
+  updateProgress();
+
+  // تعديل حدث النقر: كل نقرة تصعد 5000 بكسل
   btn.addEventListener("click", () => {
+    const currentScroll = window.scrollY;
+    const targetScroll = Math.max(0, currentScroll - 5000);
+    
     window.scrollTo({
-      top: 0,
+      top: targetScroll,
       behavior: "smooth"
     });
   });
