@@ -267,6 +267,7 @@ let blockNextClick = false;
 let velocity = 0;
 let lastX = 0;
 let lastTime = 0;
+let inertiaAnimationFrame = null; // متغيّر للاحتفاظ بأنيميشن التباطؤ للماوس
 
 container.addEventListener('touchstart', startDrag, { passive: true });
 container.addEventListener('mousedown', startDrag);
@@ -296,6 +297,11 @@ document.addEventListener('click', function (e) {
 
 function startDrag(e) {
   if (e.button === 2) return;
+
+  // إيقاف أي تباطؤ مستمر إذا قام المستخدم بالضغط مجدداً أثناء حركة الماوس السابقة
+  if (inertiaAnimationFrame) {
+    cancelAnimationFrame(inertiaAnimationFrame);
+  }
 
   isDown = true;
   hasMoved = false;
@@ -332,6 +338,7 @@ function moveDrag(e) {
   const dt = now - lastTime;
 
   if (dt > 0) {
+    // حساب السرعة (المسافة المقطوعة مقسومة على الزمن)
     velocity = (x - lastX) / dt;
     lastTime = now;
     lastX = x;
@@ -372,6 +379,11 @@ function endDrag(e) {
   }
 
   // =========================
+  // 🖱️ تطبيق تأثير التباطؤ ببطء للماوس فقط
+  if (!isTouchDevice && hasMoved) {
+    applyInertia();
+  }
+
   // Snap فقط في اللمس
   if (isTouchDevice) {
     requestAnimationFrame(() => {
@@ -383,6 +395,27 @@ function endDrag(e) {
     hasMoved = false;
     isDragging = false;
   }, 150);
+}
+
+// =========================
+// دالة تباطؤ السكرول للماوس
+function applyInertia() {
+  // معامل الاحتكاك لتخفيف السرعة (كلما اقترب من 1 كلما طالت مدة التباطؤ)
+  const friction = 0.95; 
+  
+  function step() {
+    if (Math.abs(velocity) > 0.05) {
+      // تحريك السكرول بناءً على السرعة الحالية بالاتجاه المعاكس للسحب
+      container.scrollLeft -= velocity * 15; 
+      // تقليل السرعة تدريجياً
+      velocity *= friction; 
+      inertiaAnimationFrame = requestAnimationFrame(step);
+    } else {
+      velocity = 0;
+    }
+  }
+  
+  inertiaAnimationFrame = requestAnimationFrame(step);
 }
 
 // =========================
